@@ -1,0 +1,62 @@
+diff --git a/packages/react-vtable/package.json b/packages/react-vtable/package.json
+index 0c9f19be2..ef2482b7c 100644
+--- a/packages/react-vtable/package.json
++++ b/packages/react-vtable/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "k-react-vtable",
+-  "version": "1.0.39",
++  "version": "1.0.40",
+   "description": "The react version of VTable",
+   "keywords": [
+     "react",
+@@ -57,7 +57,7 @@
+     "react-dom": "^18.2.0 || ^19.0.0"
+   },
+   "dependencies": {
+-    "k-vtable": "1.0.39",
++    "k-vtable": "1.0.40",
+     "@visactor/vutils": "~1.0.17",
+     "react-is": "^18.2.0",
+     "react-reconciler": "0.29.0"
+diff --git a/packages/react-vtable/src/components/vrender-components/type.ts b/packages/react-vtable/src/components/vrender-components/type.ts
+index f901b7a13..778439d68 100644
+--- a/packages/react-vtable/src/components/vrender-components/type.ts
++++ b/packages/react-vtable/src/components/vrender-components/type.ts
+@@ -1,5 +1,5 @@
+ import type { Ref } from 'react';
+-import type { IEventParamsType, StateDefinitionsInput } from '@visactor/vtable/es/vrender';
++import type { IEventParamsType, StateDefinitionsInput } from 'k-vtable/es/vrender';
+ 
+ export type GraphicProps<IGraphicGraphicAttribute extends Record<string, unknown>, IGraphicElement> = {
+   attribute?: IGraphicGraphicAttribute;
+diff --git a/packages/react-vtable/src/table-components/custom/graphic.ts b/packages/react-vtable/src/table-components/custom/graphic.ts
+index c1f303262..9481f5647 100644
+--- a/packages/react-vtable/src/table-components/custom/graphic.ts
++++ b/packages/react-vtable/src/table-components/custom/graphic.ts
+@@ -18,7 +18,7 @@ import type {
+   IRichTextGraphicAttribute,
+   IPolygonGraphicAttribute,
+   StateDefinitionsInput
+-} from '@visactor/vtable/es/vrender';
++} from 'k-vtable/es/vrender';
+ 
+ type GraphicProps<IGraphicGraphicAttribute extends Record<string, unknown>> = {
+   attribute: IGraphicGraphicAttribute;
+diff --git a/packages/react-vtable/src/table-components/custom/vtable-browser-env-contribution.ts b/packages/react-vtable/src/table-components/custom/vtable-browser-env-contribution.ts
+index 81de4d5b2..f611ab7a3 100644
+--- a/packages/react-vtable/src/table-components/custom/vtable-browser-env-contribution.ts
++++ b/packages/react-vtable/src/table-components/custom/vtable-browser-env-contribution.ts
+@@ -1,6 +1,6 @@
+-import { getTargetCell } from '@visactor/vtable';
+-import type { CreateDOMParamsType, IGraphic } from '@visactor/vtable/es/vrender';
+-import { EnvContribution, BrowserEnvContribution } from '@visactor/vtable/es/vrender';
++import { getTargetCell } from 'k-vtable';
++import type { CreateDOMParamsType, IGraphic } from 'k-vtable/es/vrender';
++import { EnvContribution, BrowserEnvContribution } from 'k-vtable/es/vrender';
+ import { isString } from '@visactor/vutils';
+ 
+ export type CreateDOMParamsTypeForVTable = CreateDOMParamsType & {
+diff --git a/packages/react-vtable/staged_26-07-28-1.patch b/packages/react-vtable/staged_26-07-28-1.patch
+new file mode 100644
+index 000000000..e69de29bb

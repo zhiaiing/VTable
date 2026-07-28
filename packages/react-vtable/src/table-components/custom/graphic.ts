@@ -18,7 +18,7 @@ import type {
   IRichTextGraphicAttribute,
   IPolygonGraphicAttribute,
   StateDefinitionsInput
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 
 type GraphicProps<IGraphicGraphicAttribute extends Record<string, unknown>> = {
   attribute: IGraphicGraphicAttribute;

@@ -1,6 +1,6 @@
-import { getTargetCell } from '@visactor/vtable';
-import type { CreateDOMParamsType, IGraphic } from '@visactor/vtable/es/vrender';
-import { EnvContribution, BrowserEnvContribution } from '@visactor/vtable/es/vrender';
+import { getTargetCell } from 'k-vtable';
+import type { CreateDOMParamsType, IGraphic } from 'k-vtable/es/vrender';
+import { EnvContribution, BrowserEnvContribution } from 'k-vtable/es/vrender';
 import { isString } from '@visactor/vutils';
 
 export type CreateDOMParamsTypeForVTable = CreateDOMParamsType & {

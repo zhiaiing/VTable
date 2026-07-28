@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import type { IEventParamsType, StateDefinitionsInput } from '@visactor/vtable/es/vrender';
+import type { IEventParamsType, StateDefinitionsInput } from 'k-vtable/es/vrender';
 
 export type GraphicProps<IGraphicGraphicAttribute extends Record<string, unknown>, IGraphicElement> = {
   attribute?: IGraphicGraphicAttribute;
