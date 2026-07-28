@@ -6,11 +6,11 @@ import type {
   IStage,
   IText,
   SimpleDomStyleOptions
-} from '@visactor/vtable/es/vrender';
-import { DefaultAttribute, ReactAttributePlugin, application } from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
+import { DefaultAttribute, ReactAttributePlugin, application } from 'k-vtable/es/vrender';
 import { calculateAnchorOfBounds, isFunction, isNil, isObject, isString, styleStringToObject } from '@visactor/vutils';
 import type { CreateDOMParamsTypeForVTable } from './vtable-browser-env-contribution';
-import { CUSTOM_CONTAINER_NAME } from '@visactor/vtable';
+import { CUSTOM_CONTAINER_NAME } from 'k-vtable';
 
 export class VTableReactAttributePlugin extends ReactAttributePlugin {
   declare htmlMap: Record<

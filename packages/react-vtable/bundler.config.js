@@ -14,10 +14,10 @@ module.exports = {
     treeshake: true
   },
   globals: {
-    '@visactor/vtable': 'VTable'
+    // '@visactor/vtable': 'VTable'
   },
-  external: ['@visactor/vtable', 'react'],
+  // external: ['@visactor/vtable', 'react'],
   alias: {
-    '@visactor/vtable/es/vrender': '@visactor/vtable/es/vrender.js'
+    // '@visactor/vtable/es/vrender': '@visactor/vtable/es/vrender.js'
   }
 };

@@ -1,5 +1,5 @@
 import type React from 'react';
-import { register, PivotChart as PivotChartConstrouctor, type PivotChartConstructorOptions } from '@visactor/vtable';
+import { register, PivotChart as PivotChartConstrouctor, type PivotChartConstructorOptions } from 'k-vtable';
 import type { BaseTableProps } from './base-table';
 import { createTable } from './base-table';
 

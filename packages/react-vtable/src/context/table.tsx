@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ListTable, PivotTable, PivotChart } from '@visactor/vtable';
+import type { ListTable, PivotTable, PivotChart } from 'k-vtable';
 
 export interface TableContextType {
   table?: ListTable | PivotTable | PivotChart;

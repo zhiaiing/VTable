@@ -1,5 +1,5 @@
 import type { ReactElement, JSXElementConstructor } from 'react';
-import type { Radio as VRadio, RadioAttributes } from '@visactor/vtable/es/vrender';
+import type { Radio as VRadio, RadioAttributes } from 'k-vtable/es/vrender';
 import type { GraphicProps } from './type';
 
 // component from vrender-component

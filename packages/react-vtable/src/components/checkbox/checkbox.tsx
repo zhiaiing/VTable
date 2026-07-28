@@ -6,7 +6,7 @@ import type {
   Padding,
   CheckBox as VRenderCheckbox,
   CheckboxAttributes
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 import { Checkbox as VCheckbox } from '../vrender-components/checkbox';
 import { merge } from '@visactor/vutils';
 import React, { useCallback, useEffect } from 'react';

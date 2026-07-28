@@ -1,5 +1,5 @@
 /* eslint-disable react/display-name */
-// import * as VTable from '@visactor/vtable';
+// import * as VTable from 'k-vtable';
 // import { VTable } from '../vtable';
 import React, { useState, useEffect, useRef, useImperativeHandle, useCallback } from 'react';
 import type { ContainerProps } from '../containers/withContainer';
@@ -7,7 +7,7 @@ import withContainer from '../containers/withContainer';
 import type { TableContextType } from '../context/table';
 import RootTableContext from '../context/table';
 import { isEqual, isNil, isNumber, pickWithout } from '@visactor/vutils';
-import { toArray } from '../util';
+import { isEqualRecords, toArray } from '../util';
 import { REACT_PRIVATE_PROPS } from '../constants';
 import type { IMarkElement } from '../table-components';
 import type {
@@ -24,7 +24,7 @@ import type {
 import { bindEventsToTable, TABLE_EVENTS_KEYS, TABLE_EVENTS } from '../eventsUtils';
 import { VTableReactAttributePlugin } from '../table-components/custom/vtable-react-attribute-plugin';
 import { reactEnvModule } from '../table-components/custom/vtable-browser-env-contribution';
-import { container, isBrowserEnv } from '@visactor/vtable/es/vrender';
+import { container, isBrowserEnv } from 'k-vtable/es/vrender';
 import type {
   ListTable,
   PivotTable,
@@ -32,8 +32,8 @@ import type {
   ListTableConstructorOptions,
   PivotTableConstructorOptions,
   PivotChartConstructorOptions
-} from '@visactor/vtable';
-import type { TYPES } from '@visactor/vtable';
+} from 'k-vtable';
+import type { TYPES } from 'k-vtable';
 
 export type IVTable = ListTable | PivotTable | PivotChart;
 export type IOption = ListTableConstructorOptions | PivotTableConstructorOptions | PivotChartConstructorOptions;
@@ -335,7 +335,7 @@ const BaseTable: React.FC<Props> = React.forwardRef((props, ref) => {
       // columnWidths.current = [];
       handleTableRender();
       eventsBinded.current = props;
-    } else if (hasRecords && !isEqual(props.records, prevRecords.current, { skipFunction: skipFunctionDiff })) {
+    } else if (hasRecords && !isEqualRecords(props.records, prevRecords.current, { skipFunction: skipFunctionDiff })) {
       prevRecords.current = props.records;
 
       if (keepColumnWidthChange) {

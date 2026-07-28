@@ -6,7 +6,7 @@ import type {
   Padding,
   Radio as VRenderRadio,
   RadioAttributes
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 import { Radio as VRadio } from '../vrender-components/radio';
 import { merge } from '@visactor/vutils';
 import React, { useCallback, useEffect } from 'react';

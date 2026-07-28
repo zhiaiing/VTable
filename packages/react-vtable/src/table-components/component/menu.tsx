@@ -1,7 +1,7 @@
-import type { BaseTable } from '@visactor/vtable/es/core';
+import type { BaseTable } from 'k-vtable/es/core';
 import type { BaseComponentProps } from '../base-component';
 import { createComponent } from '../base-component';
-import type { TYPES } from '@visactor/vtable';
+import type { TYPES } from 'k-vtable';
 
 export type MenuProps = {
   /** 代替原来的option.menuType  html目前实现较完整 先默认html渲染方式*/

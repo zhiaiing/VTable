@@ -1,4 +1,4 @@
-import { CheckBox, Radio, Tag } from '@visactor/vtable/es/vrender';
+import { CheckBox, Radio, Tag } from 'k-vtable/es/vrender';
 
 export function createVRenderComponent(type: string, props: any) {
   // may have unwanted onxxx prop

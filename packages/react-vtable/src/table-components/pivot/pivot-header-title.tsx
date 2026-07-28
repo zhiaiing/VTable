@@ -1,6 +1,6 @@
 import type { BaseComponentProps } from '../base-component';
 import { createComponent } from '../base-component';
-import type { ITitleDefine } from '@visactor/vtable';
+import type { ITitleDefine } from 'k-vtable';
 
 export type PivotHeaderTitleProps = ITitleDefine & BaseComponentProps;
 

@@ -2,8 +2,8 @@
 import type { PropsWithChildren, ReactElement } from 'react';
 import React, { isValidElement, useCallback, useContext, useLayoutEffect, useRef } from 'react';
 import RootTableContext from '../../context/table';
-import { Group } from '@visactor/vtable/es/vrender';
-import type { ICustomLayoutFuc, CustomRenderFunctionArg } from '@visactor/vtable/es/ts-types';
+import { Group } from 'k-vtable/es/vrender';
+import type { ICustomLayoutFuc, CustomRenderFunctionArg } from 'k-vtable/es/ts-types';
 import type { FiberRoot } from 'react-reconciler';
 import type { ReconcilerErrorReporter } from './reconciler';
 import { reconcilor, createReconcilerContainer } from './reconciler';

@@ -629,7 +629,7 @@ function verifyProxyRowStatus(scene: Scenegraph) {
 
   if (rowStart > rowEnd) {
     // 当前维护行全部清空, 重置proxy row状态
-    proxy.rowStart = scene.table.columnHeaderLevelCount;
+    proxy.rowStart = scene.table.frozenRowCount;
     proxy.rowEnd = Math.min(totalRow, proxy.rowStart + rowLimit - 1);
     proxy.currentRow = 0;
 
@@ -639,7 +639,7 @@ function verifyProxyRowStatus(scene: Scenegraph) {
   // 当前维护行部分清空，并且rowEnd向下已经超出范围，rowStart 需要向上更新
   if (rowStart + rowLimit - 1 > totalRow) {
     const oldRowStart = proxy.rowStart;
-    const newRowStart = Math.max(scene.table.columnHeaderLevelCount, totalRow - rowLimit + 1);
+    const newRowStart = Math.max(scene.table.frozenRowCount, totalRow - rowLimit + 1);
 
     if (newRowStart === oldRowStart) {
       return;

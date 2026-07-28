@@ -1,6 +1,6 @@
 import type { BaseComponentProps } from '../base-component';
 import { createComponent } from '../base-component';
-import type { ICornerDefine } from '@visactor/vtable';
+import type { ICornerDefine } from 'k-vtable';
 
 export type PivotCornerProps = ICornerDefine & BaseComponentProps;
 

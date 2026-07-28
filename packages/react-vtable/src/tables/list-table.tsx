@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { ListTableConstructorOptions } from '@visactor/vtable';
-import { ListTable as ListTableConstrouctor } from '@visactor/vtable';
+import type { ListTableConstructorOptions } from 'k-vtable';
+import { ListTable as ListTableConstrouctor } from 'k-vtable';
 import type { BaseTableProps } from './base-table';
 import { createTable } from './base-table';
 

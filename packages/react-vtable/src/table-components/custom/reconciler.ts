@@ -1,5 +1,5 @@
-import { application, REACT_TO_CANOPUS_EVENTS, Group, Tag, Text } from '@visactor/vtable/es/vrender';
-import type { FlexLayoutPlugin, Graphic, IGraphic, IGraphicCreator } from '@visactor/vtable/es/vrender';
+import { application, REACT_TO_CANOPUS_EVENTS, Group, Tag, Text } from 'k-vtable/es/vrender';
+import type { FlexLayoutPlugin, Graphic, IGraphic, IGraphicCreator } from 'k-vtable/es/vrender';
 import { isFunction, isNumber, merge } from '@visactor/vutils';
 import React from 'react';
 import ReactReconciler from 'react-reconciler';

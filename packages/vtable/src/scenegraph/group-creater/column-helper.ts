@@ -59,9 +59,9 @@ export function createComplexColumn(
     y = (columnGroup.lastChild as Group).attribute.y + (columnGroup.lastChild as Group).attribute.height;
   } else if (columnGroup.colHeight) {
     y = columnGroup.colHeight;
-  } else if (rowStart >= table.columnHeaderLevelCount && rowStart < table.rowCount - table.bottomFrozenRowCount) {
+  } else if (rowStart > table.frozenRowCount && rowStart < table.rowCount - table.bottomFrozenRowCount) {
     // 这个if判断为了解决#4357 当传入的rowStart例如50但是columnGroup中并没有其他cell的情况下，上面逻辑有问题y赋值的0 导致新建单元格错位
-    y = table.getRowsHeight(table.columnHeaderLevelCount, rowStart - 1);
+    y = table.getRowsHeight(table.frozenRowCount, rowStart - 1);
   }
 
   for (let j = rowStart; j <= rowEnd; j++) {
@@ -103,8 +103,10 @@ export function createComplexColumn(
           customResult = dealWithCustom(
             customLayout,
             customRender,
-            customMergeRange.start.col,
-            customMergeRange.start.row,
+            // customMergeRange.start.col,
+            col,
+            // customMergeRange.start.row,
+            row,
             table.getColsWidth(customMergeRange.start.col, customMergeRange.end.col),
             table.getRowsHeight(customMergeRange.start.row, customMergeRange.end.row),
             false,
@@ -180,8 +182,10 @@ export function createComplexColumn(
           customResult = dealWithCustom(
             (table.internalProps as ListTableProtected).groupTitleCustomLayout,
             undefined,
-            range.start.col,
-            range.start.row,
+            col,
+            // range.start.col,
+            row,
+            // range.start.row,
             table.getColsWidth(range.start.col, range.end.col),
             table.getRowsHeight(range.start.row, range.end.row),
             false,

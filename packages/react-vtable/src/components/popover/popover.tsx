@@ -8,7 +8,7 @@ import type {
   Padding,
   Tag,
   TagAttributes
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 import { Tag as VTag } from '../vrender-components/tag';
 import type { BoundsAnchorType } from '@visactor/vutils';
 import { isValid, merge } from '@visactor/vutils';

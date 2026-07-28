@@ -1,4 +1,4 @@
-import type { IGroup, IGroupGraphicAttribute } from '@visactor/vtable/es/vrender';
+import type { IGroup, IGroupGraphicAttribute } from 'k-vtable/es/vrender';
 import {
   measureTextSize,
   type BackgroundAttributes,
@@ -8,7 +8,7 @@ import {
   type Padding,
   type Tag,
   type TagAttributes
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 import { Tag as VTag } from '../vrender-components/tag';
 import { isString, merge } from '@visactor/vutils';
 import type { ReactElement } from 'react';

@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { BaseComponentProps } from '../base-component';
 import { createComponent } from '../base-component';
-import type { ColumnDefine } from '@visactor/vtable';
+import type { ColumnDefine } from 'k-vtable';
 
 export type ListColumnProps = Omit<ColumnDefine, 'columns'> & BaseComponentProps;
 

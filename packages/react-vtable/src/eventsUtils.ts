@@ -1,7 +1,7 @@
-// import { ListTable, PivotTable, PivotChart } from '@visactor/vtable';
+// import { ListTable, PivotTable, PivotChart } from 'k-vtable';
 import type { IVTable } from './tables/base-table';
-import type { TYPES } from '@visactor/vtable';
-import { TABLE_EVENT_TYPE, PIVOT_CHART_EVENT_TYPE, PIVOT_TABLE_EVENT_TYPE } from '@visactor/vtable';
+import type { TYPES } from 'k-vtable';
+import { TABLE_EVENT_TYPE, PIVOT_CHART_EVENT_TYPE, PIVOT_TABLE_EVENT_TYPE } from 'k-vtable';
 
 export type EventCallback<Params> = (params: Params) => void;
 

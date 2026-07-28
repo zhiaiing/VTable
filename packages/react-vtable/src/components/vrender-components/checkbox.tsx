@@ -1,5 +1,5 @@
 import type { ReactElement, JSXElementConstructor } from 'react';
-import type { CheckboxAttributes, CheckBox as VCheakbox } from '@visactor/vtable/es/vrender';
+import type { CheckboxAttributes, CheckBox as VCheakbox } from 'k-vtable/es/vrender';
 import type { GraphicProps } from './type';
 
 // component from vrender-component

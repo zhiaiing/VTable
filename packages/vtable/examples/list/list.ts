@@ -34,7 +34,7 @@ VTable.register.icon('sort_normal', {
 });
 
 export function createTable() {
-  const records = generatePersons(2000);
+  const records = generatePersons(10);
   const columns: VTable.ColumnsDefine = [
     {
       field: '',
@@ -138,7 +138,7 @@ export function createTable() {
       field: 'city',
       title: 'city',
       width: 150,
-      mergeCell: true
+      // mergeCell: true
     },
     {
       field: 'date1',
@@ -243,6 +243,7 @@ export function createTable() {
     },
     frozenColCount: 1,
     bottomFrozenRowCount: 2,
+    frozenRowCount: 3,
     rightFrozenColCount: 2,
     overscrollBehavior: 'none',
     dragHeaderMode: 'all',
@@ -284,16 +285,41 @@ export function createTable() {
       frameStyle: {
         cornerRadius: [10, 0, 0, 10],
         // cornerRadius: 10,
-        borderLineWidth: [10, 0, 10, 10],
+        // borderLineWidth: [10, 0, 10, 10],
+        borderLineWidth: 1,
         // borderLineWidth: 10,
-        borderColor: 'red',
+        borderColor: '#dddddd',
         shadowBlur: 0
+      },
+      frozenColumnLine: {
+        shadow: {
+          width: 6,
+          startColor: 'rgba(152, 152, 152, 0.1)',
+          endColor: 'transparent',
+          visible: 'always'
+        }
+      },
+      bodyStyle: {
+        borderLineWidth: 1,
+        borderColor: '#dddddd'
+      },
+      headerStyle: {
+        borderLineWidth: 1,
+        borderColor: '#dddddd'
       },
       columnResize: {
         lineColor: 'red',
         lineWidth: 2,
         width: 1,
         resizeHotSpotSize: 4
+      },
+      scrollStyle: {
+        barToSide: false,
+        horizontalVisible: 'focus',
+        verticalVisible: 'focus',
+        // scrollSliderColor: 'red',
+        scrollSliderColor: 'rgba(0, 0, 0, 0.15)',
+        visible: 'focus'
       }
     },
     excelOptions: {

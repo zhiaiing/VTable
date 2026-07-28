@@ -10,6 +10,12 @@ import { vglobal, type FederatedWheelEvent } from '@src/vrender';
  */
 export function handleWhell(event: FederatedWheelEvent, state: StateManager, isWheelEvent: boolean = true) {
   let { deltaX, deltaY } = event;
+
+  const absY = Math.abs(deltaY);
+  if (absY !== 0 && Math.abs(absY) > 10) {
+    deltaY = deltaY / (absY > 100 ? 3 : 2);
+  }
+
   // 如果按住了shift 则进行横向滚动 纵向不滚动
   if (event.shiftKey && event.deltaY) {
     //mac电脑按住shift 鼠标滚动deltaX和deltaY是自动互换的，所以此逻辑只针对windows电脑有效及mac触摸板有效

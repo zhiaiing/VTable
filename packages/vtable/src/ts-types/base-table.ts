@@ -280,6 +280,8 @@ export interface IBaseTableProtected {
 
   modifiedViewBoxTransform?: boolean;
   // react component container
+  tableBodyDomContainer?: HTMLElement;
+  tableHeaderDomContainer?: HTMLElement;
   bodyDomContainer?: HTMLElement;
   headerDomContainer?: HTMLElement;
   frozenBodyDomContainer?: HTMLElement;
@@ -724,6 +726,8 @@ export interface BaseTableConstructorOptions {
   plugins?: IVTablePlugin[];
   /** 默认的鼠标样式 */
   defaultCursor?: string;
+
+  customCellStyleFn?: (col: number, row: number, table: BaseTableAPI, fillColor: string) => string;
 }
 export interface BaseTableAPI {
   id: string;
@@ -1190,6 +1194,8 @@ export interface ListTableProtected extends IBaseTableProtected {
   groupTitleCustomLayout?: ICustomLayout;
   enableTreeStickCell?: boolean;
   groupTitleCheckbox?: boolean;
+  groupCellMerge?: (col: number, row: number, cellRange: CellRange, layout: SimpleHeaderLayoutMap) => void;
+  customDealGroupData?: (records: any[]) => any[];
 }
 
 export interface PivotTableProtected extends IBaseTableProtected {

@@ -6,7 +6,7 @@ import type {
   Padding,
   Tag,
   TagAttributes
-} from '@visactor/vtable/es/vrender';
+} from 'k-vtable/es/vrender';
 import { Tag as VTag } from '../vrender-components/tag';
 import { merge } from '@visactor/vutils';
 import React, { useEffect } from 'react';

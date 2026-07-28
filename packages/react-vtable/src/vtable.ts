@@ -1,3 +1,3 @@
-// import * as VTable from '@visactor/vtable';
+// import * as VTable from 'k-vtable';
 
 // export { VTable };

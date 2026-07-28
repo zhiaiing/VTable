@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { PivotTableConstructorOptions } from '@visactor/vtable';
-import { PivotTable as PivotTableConstrouctor } from '@visactor/vtable';
+import type { PivotTableConstructorOptions } from 'k-vtable';
+import { PivotTable as PivotTableConstrouctor } from 'k-vtable';
 import type { BaseTableProps } from './base-table';
 import { createTable } from './base-table';
 

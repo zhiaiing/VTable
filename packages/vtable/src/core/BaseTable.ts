@@ -466,6 +466,8 @@ export abstract class BaseTable extends EventTarget implements BaseTableAPI {
     (internalProps as ListTableProtected).groupBy = groupConfig?.groupBy ?? groupBy;
     (internalProps as ListTableProtected).groupTitleCheckbox =
       groupConfig?.titleCheckbox ?? !!rowSeriesNumber?.enableTreeCheckbox;
+    (internalProps as ListTableProtected).groupCellMerge = groupConfig?.groupCellMerge;
+    (internalProps as ListTableProtected).customDealGroupData = groupConfig?.customDealGroupData;
     (internalProps as ListTableProtected).groupTitleFieldFormat =
       groupConfig?.titleFieldFormat ?? groupTitleFieldFormat;
     (internalProps as ListTableProtected).groupTitleCustomLayout =
