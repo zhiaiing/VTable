@@ -63,6 +63,7 @@ export class DebugTool {
     this._infoContainer.style.backgroundColor = 'rgba(210, 210, 210, 0.3)';
     this._infoContainer.style.overflow = 'auto';
     this._infoContainer.style.display = 'none';
+    this._infoContainer.style.fontSize = '14px';
     switch (position) {
       case 'tl':
         this._infoContainer.style.top = '0px';
@@ -250,7 +251,7 @@ export class DebugTool {
 
   release() {
     // 移除信息框
-    document.body.removeChild(this._infoContainer);
+    this._stage.window.getContainer().removeChild(this._infoContainer);
 
     // 移除高亮框
     this._highlightRect.parentElement.removeChild(this._highlightRect);

@@ -139,8 +139,8 @@ export class ListTable extends BaseTable implements ListTableAPI {
     internalProps.sortState = options.sortState;
     internalProps.multipleSort = !!options.multipleSort;
     internalProps.dataConfig = this.internalProps.groupBy
-      ? getGroupByDataConfig(this.internalProps.groupBy, options.addRecordRule)
-      : { addRecordRule: options.addRecordRule }; //cloneDeep(options.dataConfig ?? {});
+      ? getGroupByDataConfig(this.internalProps.groupBy, options.addRecordRule, this.internalProps.customDealGroupData)
+      : { addRecordRule: options.addRecordRule, customDealGroupData: this.internalProps.customDealGroupData }; //cloneDeep(options.dataConfig ?? {});
     internalProps.columns = options.columns
       ? cloneDeepSpec(options.columns, ['children']) // children for react
       : options.header
@@ -792,7 +792,7 @@ export class ListTable extends BaseTable implements ListTableAPI {
     internalProps.sortState = options.sortState;
     // internalProps.dataConfig = {}; // cloneDeep(options.dataConfig ?? {});
     internalProps.dataConfig = (this.internalProps as ListTableProtected).groupBy
-      ? getGroupByDataConfig((this.internalProps as ListTableProtected).groupBy, options.addRecordRule)
+      ? getGroupByDataConfig((this.internalProps as ListTableProtected).groupBy, options.addRecordRule, (this.internalProps as ListTableProtected).customDealGroupData)
       : { addRecordRule: options.addRecordRule }; //cloneDeep(options.dataConfig ?? {});
     //更新protectedSpace
     this.showHeader = options.showHeader ?? true;

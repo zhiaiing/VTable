@@ -31,6 +31,9 @@ export function getCellSelectColor(cellGroup: Group, table: BaseTableAPI): strin
   }
 
   if (!colorKey) {
+    if (table.options.customCellStyleFn) {
+      return table.options.customCellStyleFn(cellGroup.col, cellGroup.row, table, '#ffffff');
+    }
     return undefined;
   }
 
@@ -54,6 +57,11 @@ export function getCellSelectColor(cellGroup: Group, table: BaseTableAPI): strin
     selectStyle = table.theme.bodyStyle?.select;
   }
   const fillColor = getProp(colorKey, selectStyle, cellGroup.col, cellGroup.row, table);
+
+  if (table.options.customCellStyleFn) {
+    return table.options.customCellStyleFn(cellGroup.col, cellGroup.row, table, fillColor);
+  }
+
   return fillColor;
 }
 

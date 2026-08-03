@@ -64,6 +64,10 @@ export const menus = [
       },
       {
         path: 'debug',
+        name: 'issue-5253'
+      },
+      {
+        path: 'debug',
         name: 'issue-4761-update-records-edit-render'
       },
       {

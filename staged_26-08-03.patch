@@ -1,0 +1,1833 @@
+diff --git a/docs/k-release.md b/docs/k-release.md
+new file mode 100644
+index 000000000..d992eb03a
+--- /dev/null
++++ b/docs/k-release.md
+@@ -0,0 +1,127 @@
++# `k-vtable` / `k-react-vtable` 发布说明
++
++这两个包通过独立发布层生成。源码仍保持上游身份：
++
++```text
++packages/vtable       -> @visactor/vtable
++packages/react-vtable -> @visactor/react-vtable
++```
++
++不要在 React 源码、Rush 项目名或源码 `package.json` 中长期维护 `k-*` 改名。`scripts/k-release.mjs` 只修改复制到根目录 `release/` 的构建产物。
++
++## 环境要求
++
++- Node.js 必须满足 `rush.json` 的支持范围。
++- Rush 和 pnpm 由 `common/scripts/install-run-rush*.js` 按仓库配置加载；当前 pnpm 为 10.7.0。
++- `pack` 需要网络访问以创建全新消费项目。
++- 浏览器门禁需要本机安装 Google Chrome、Chromium 或 Microsoft Edge。
++- npm 发布前需要已登录目标 registry。
++
++## 1. 生成发布目录
++
++```bash
++node scripts/k-release.mjs prepare --version 1.0.40
++```
++
++默认先执行：
++
++```bash
++node common/scripts/install-run-rush.js build -t @visactor/react-vtable
++```
++
++随后生成：
++
++```text
++release/k-vtable/
++release/k-react-vtable/
++artifacts/k-release-1.0.40.prepare.json
++```
++
++在已经完成同一源码构建的调试或 CI 阶段可以使用：
++
++```bash
++node scripts/k-release.mjs prepare --version 1.0.40 --skip-build
++```
++
++`--skip-build` 仍会检查 ESM、CJS、类型入口和构建版本；过期产物会直接失败。
++
++发布 manifest 会执行以下转换：
++
++- `@visactor/vtable` 改名为 `k-vtable`。
++- `@visactor/react-vtable` 改名为 `k-react-vtable`。
++- React ESM/类型中的精确 `@visactor/vtable/es/*` 改为 `k-vtable/es/*`，CJS JavaScript 中则改为 `k-vtable/cjs/*`，避免 Node require 进入深层 ESM 文件。
++- `k-react-vtable` 删除原始核心依赖，改用与发布版本完全一致的 `k-vtable` peer dependency。
++- `k-react-vtable` 删除上游的条件 `exports`；Node ESM 回退到 `main` 的 CJS 入口，bundler 仍通过 `module` 使用 ESM，避免 Node 直接执行含无扩展名相对导入的 Rollup ESM 产物。
++- VRender 五个运行时包统一固定为 1.1.5。
++- 两个入口及 source map 中导出的版本改为命令行版本。
++- 不复制或发布 `dist/` UMD 文件。
++
++## 2. Pack 和全新消费验证
++
++```bash
++node scripts/k-release.mjs pack --version 1.0.40
++```
++
++必须先存在同版本、同源码状态的 prepare 结果。该命令会：
++
++1. 使用 `npm pack --dry-run --json` 验证文件白名单。
++2. 将两个精确 tarball 写入 `artifacts/`。
++3. 在系统临时目录创建全新消费项目。
++4. 使用仓库固定的 pnpm 安装两个 tarball、React 18 和 `@visactor/vchart@2.1.3`。
++5. 验证所有 VRender 包只有 1.1.5 一个版本，且只有一个 `k-vtable` 核心身份。
++6. 验证 CJS、ESM、TypeScript 公开类型和深层类型入口。TypeScript 门禁启用 `skipLibCheck`，用于验证消费代码与入口解析，不把 VChart/VRender 上游声明文件内部错误误判为改名回归。
++7. 使用 Vite build 和系统 Chrome headless 运行 ListTable、React 自定义布局、冻结行和 PivotChart。
++8. 确认没有 CanvasFactory/Context2dFactory 错误后写入 `artifacts/k-release-1.0.40.pack.json`。
++
++任一消费测试失败时不会生成通过状态，tarball 不得发布。
++
++## 3. 显式发布
++
++```bash
++node scripts/k-release.mjs publish --version 1.0.40 --tag latest
++```
++
++指定 registry：
++
++```bash
++node scripts/k-release.mjs publish \
++  --version 1.0.40 \
++  --tag latest \
++  --registry https://registry.npmjs.org/
++```
++
++publish 会验证：
++
++- pack 状态属于当前版本和源码提交。
++- 两个精确 tarball 仍存在并带有 integrity/shasum。
++- `npm whoami` 成功。
++- 首次发布时两个目标版本都不存在。
++
++发布顺序固定为：
++
++1. `k-vtable`
++2. 等待 registry 返回相同 integrity
++3. `k-react-vtable`
++4. 等待 registry 返回相同 integrity
++
++如果核心包成功但 React 包失败，可以重新执行同一条 publish 命令。只有 registry 上核心包的 `dist.integrity` 与本地 pack 状态完全一致时，脚本才会跳过核心包并续发 React 包。
++
++脚本不会执行 Git commit、tag、push、rebase、自动 unpublish 或 npm 版本覆盖。版本已经完整发布后再次执行会失败；缺陷修复应递增 patch 版本。
++
++## 常见失败
++
++### `CanvasFactory is not configured`
++
++检查 pack 输出中的依赖图。`@visactor/vrender`、core、kits、components 和 animate 必须全部只有 1.1.5。不要通过在 React bundler 中内嵌另一份 VTable 来规避依赖问题。
++
++### prepare 找不到源码版本
++
++构建产物已过期，或上游改变了版本注入格式。重新执行不带 `--skip-build` 的 prepare；不要手工无约束替换构建文件。
++
++### 找不到 Chrome
++
++安装 Chrome/Chromium/Edge 后重新执行 pack。浏览器门禁用于复现 VRender 全局注册冲突，不能用仅 Node 的测试替代。
++
++### 核心已发布、React 失败
++
++保留原 `artifacts/k-release-<version>.pack.json` 和 tarball，修复登录或 registry 问题后重试 publish。若核心 integrity 不一致，停止续发并使用新的 patch 版本。
+diff --git a/packages/vtable/examples/debug/issue-5253.ts b/packages/vtable/examples/debug/issue-5253.ts
+new file mode 100644
+index 000000000..b204d706b
+--- /dev/null
++++ b/packages/vtable/examples/debug/issue-5253.ts
+@@ -0,0 +1,114 @@
++import * as VTable from '../../src';
++
++const CONTAINER_ID = 'vTable';
++const TOOLBAR_ID = 'issue5253Toolbar';
++
++const createRecords = (count: number) =>
++  Array.from({ length: count }, (_, index) => ({
++    id: index + 1,
++    name: `Person ${index + 1}`,
++    email: `person${index + 1}@example.com`,
++    city: index % 2 === 0 ? 'Beijing' : 'Shanghai'
++  }));
++
++const removeToolbar = () => {
++  document.getElementById(TOOLBAR_ID)?.remove();
++};
++
++export function createTable() {
++  removeToolbar();
++
++  const container = document.getElementById(CONTAINER_ID);
++  if (!container) {
++    throw new Error('Cannot find VTable container');
++  }
++
++  container.style.width = '1000px';
++  container.style.height = '800px';
++
++  const toolbar = document.createElement('div');
++  toolbar.id = TOOLBAR_ID;
++  toolbar.style.cssText = [
++    'display: flex',
++    'align-items: center',
++    'gap: 12px',
++    'min-height: 36px',
++    'font-size: 12px',
++    'line-height: 18px'
++  ].join(';');
++  toolbar.innerHTML = `
++    <strong>Issue #5253</strong>
++    <span>6 records / frozenRowCount=4 / bottomFrozenRowCount=1</span>
++    <button id="issue5253CheckButton">重新检查</button>
++    <strong id="issue5253Status">CHECKING</strong>
++    <span id="issue5253Metrics"></span>
++  `;
++  container.before(toolbar);
++
++  const tableInstance = new VTable.ListTable(container, {
++    records: createRecords(6),
++    columns: [
++      { field: 'id', title: 'ID', width: 160 },
++      { field: 'name', title: 'Name', width: 280 },
++      { field: 'email', title: 'Email', width: 420 },
++      { field: 'city', title: 'City', width: 260 }
++    ],
++    frozenRowCount: 4,
++    bottomFrozenRowCount: 1,
++    widthMode: 'standard',
++    theme: VTable.themes.DEFAULT.extends({
++      scrollStyle: {
++        visible: 'always',
++        hoverOn: false
++      }
++    })
++  });
++
++  const check = () => {
++    const contentHeight = tableInstance.getAllRowsHeight();
++    const tableGroupHeight = tableInstance.scenegraph.tableGroup.attribute.height;
++    const bottomFrozenHeight = tableInstance.getBottomFrozenRowsHeight();
++    const bottomFrozenY = tableInstance.scenegraph.bottomFrozenGroup.attribute.y;
++    const expectedBottomFrozenY = contentHeight - bottomFrozenHeight;
++    const pass = tableGroupHeight === contentHeight && bottomFrozenY === expectedBottomFrozenY;
++
++    const status = document.getElementById('issue5253Status');
++    const metrics = document.getElementById('issue5253Metrics');
++    if (status) {
++      status.textContent = pass ? 'PASS' : 'FAIL';
++      status.style.color = pass ? '#237804' : '#cf1322';
++    }
++    if (metrics) {
++      metrics.textContent = [
++        `contentHeight=${contentHeight}`,
++        `tableGroupHeight=${tableGroupHeight}`,
++        `bottomFrozenY=${bottomFrozenY}`,
++        `expectedBottomFrozenY=${expectedBottomFrozenY}`
++      ].join(' | ');
++    }
++
++    return {
++      pass,
++      contentHeight,
++      tableGroupHeight,
++      bottomFrozenY,
++      expectedBottomFrozenY
++    };
++  };
++
++  document.getElementById('issue5253CheckButton')?.addEventListener('click', check);
++  requestAnimationFrame(check);
++
++  const release = tableInstance.release.bind(tableInstance);
++  tableInstance.release = () => {
++    removeToolbar();
++    release();
++  };
++
++  const demoWindow = window as unknown as {
++    tableInstance?: VTable.ListTable;
++    issue5253Check?: typeof check;
++  };
++  demoWindow.tableInstance = tableInstance;
++  demoWindow.issue5253Check = check;
++}
+diff --git a/scripts/k-release.mjs b/scripts/k-release.mjs
+new file mode 100644
+index 000000000..9a246067b
+--- /dev/null
++++ b/scripts/k-release.mjs
+@@ -0,0 +1,978 @@
++import { spawn } from 'node:child_process';
++import fs from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import { fileURLToPath, pathToFileURL } from 'node:url';
++
++const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
++
++export const RUNTIME_VERSIONS = Object.freeze({
++  '@visactor/vrender': '1.1.6',
++  '@visactor/vrender-core': '1.1.6',
++  '@visactor/vrender-kits': '1.1.6',
++  '@visactor/vrender-components': '1.1.6',
++  '@visactor/vrender-animate': '1.1.6'
++});
++
++const COMMANDS = new Set(['prepare', 'pack', 'publish']);
++const SEMVER_PATTERN =
++  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
++
++export function parseCliArgs(argv) {
++  const [command, ...rest] = argv;
++  if (!COMMANDS.has(command)) {
++    throw new Error(`Unknown command "${command ?? ''}"; expected prepare, pack, or publish`);
++  }
++
++  const result = {
++    command,
++    version: undefined,
++    registry: undefined,
++    tag: undefined,
++    skipBuild: false
++  };
++
++  for (let index = 0; index < rest.length; index++) {
++    const argument = rest[index];
++    if (argument === '--skip-build') {
++      result.skipBuild = true;
++      continue;
++    }
++
++    if (argument === '--version' || argument === '--registry' || argument === '--tag') {
++      const value = rest[index + 1];
++      if (!value || value.startsWith('--')) {
++        throw new Error(`${argument} requires a value`);
++      }
++      result[argument.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = value;
++      index++;
++      continue;
++    }
++
++    throw new Error(`Unknown argument "${argument}"`);
++  }
++
++  if (!result.version || !SEMVER_PATTERN.test(result.version)) {
++    throw new Error('--version must be a valid semver version');
++  }
++  if (result.skipBuild && command !== 'prepare') {
++    throw new Error('--skip-build is only supported by prepare');
++  }
++  if (command === 'publish' && !result.tag) {
++    throw new Error('publish requires --tag');
++  }
++
++  return result;
++}
++
++function cloneManifest(manifest) {
++  return JSON.parse(JSON.stringify(manifest));
++}
++
++function removeDevelopmentFields(manifest) {
++  delete manifest.scripts;
++  delete manifest.devDependencies;
++  delete manifest.rushVersion;
++  delete manifest.versionPolicyName;
++  return manifest;
++}
++
++export function buildVtableManifest(sourceManifest, releaseVersion) {
++  const manifest = removeDevelopmentFields(cloneManifest(sourceManifest));
++  const editorVersion = manifest.dependencies?.['@visactor/vtable-editors'];
++  if (typeof editorVersion !== 'string') {
++    throw new Error('Missing @visactor/vtable-editors dependency');
++  }
++
++  manifest.name = 'k-vtable';
++  manifest.version = releaseVersion;
++  manifest.sideEffects = true;
++  manifest.main = 'cjs/index.js';
++  manifest.module = 'es/index.js';
++  manifest.types = 'es/index.d.ts';
++  manifest.files = ['cjs', 'es'];
++  manifest.publishConfig = { access: 'public' };
++  manifest.dependencies = {
++    ...manifest.dependencies,
++    '@visactor/vtable-editors': editorVersion.replace(/^workspace:/, ''),
++    ...RUNTIME_VERSIONS
++  };
++
++  return manifest;
++}
++
++export function buildReactManifest(sourceManifest, releaseVersion) {
++  const manifest = removeDevelopmentFields(cloneManifest(sourceManifest));
++  const dependencies = { ...(manifest.dependencies ?? {}) };
++  delete dependencies['@visactor/vtable'];
++  delete manifest.exports;
++
++  manifest.name = 'k-react-vtable';
++  manifest.version = releaseVersion;
++  manifest.sideEffects = true;
++  manifest.main = 'cjs/index.js';
++  manifest.module = 'es/index.js';
++  manifest.types = 'es/index.d.ts';
++  manifest.files = ['cjs', 'es'];
++  manifest.dependencies = dependencies;
++  manifest.peerDependencies = {
++    ...(manifest.peerDependencies ?? {}),
++    'k-vtable': releaseVersion,
++    react: '^18.2.0 || ^19.0.0',
++    'react-dom': '^18.2.0 || ^19.0.0'
++  };
++  manifest.publishConfig = { access: 'public' };
++
++  return manifest;
++}
++
++export function replaceVtableReferences(source, options = {}) {
++  const format = options.format === 'cjs' ? 'cjs' : 'es';
++  return source
++    .replace(/@visactor\/vtable\/es\//g, `k-vtable/${format}/`)
++    .replace(/@visactor\/vtable(?=\/|['"`]|$)/g, 'k-vtable');
++}
++
++export function rewriteEntryVersion(source, expectedVersion, releaseVersion) {
++  const occurrences = source.split(expectedVersion).length - 1;
++  if (occurrences === 0) {
++    throw new Error(`Expected version "${expectedVersion}" was not found`);
++  }
++  if (occurrences !== 1) {
++    throw new Error(`Expected version "${expectedVersion}" must occur exactly once; found ${occurrences}`);
++  }
++  return source.replace(expectedVersion, releaseVersion);
++}
++
++export function assertSafeGeneratedPath(repoRoot, targetPath) {
++  const root = path.resolve(repoRoot);
++  const target = path.resolve(targetPath);
++  const relative = path.relative(root, target);
++  const segments = relative.split(path.sep);
++
++  if (
++    relative.startsWith('..') ||
++    path.isAbsolute(relative) ||
++    segments.length !== 2 ||
++    !['release', 'artifacts'].includes(segments[0]) ||
++    !segments[1]
++  ) {
++    throw new Error(`Unsafe generated path: ${target}`);
++  }
++
++  return target;
++}
++
++export function validatePackFileList(packResult) {
++  if (!packResult || !Array.isArray(packResult.files)) {
++    throw new Error('npm pack result does not contain a files array');
++  }
++
++  const allowedTopLevel = new Set(['package.json', 'README.md', 'LICENSE', 'es', 'cjs']);
++  for (const file of packResult.files) {
++    const filePath = file?.path;
++    if (typeof filePath !== 'string' || !filePath) {
++      throw new Error('npm pack returned an invalid file path');
++    }
++    const normalized = filePath.replaceAll('\\', '/');
++    const topLevel = normalized.split('/')[0];
++    if (!allowedTopLevel.has(topLevel)) {
++      throw new Error(`Unexpected npm pack file: ${normalized}`);
++    }
++    if (/(^|\/)(dist|src|node_modules|test|tests|__tests__|\.bundle)(\/|$)/.test(normalized)) {
++      throw new Error(`Forbidden npm pack file: ${normalized}`);
++    }
++    if (/(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/.test(normalized)) {
++      throw new Error(`Forbidden npm pack lockfile: ${normalized}`);
++    }
++  }
++}
++
++export function resolvePublishMode(corePackage, reactPackage, localCoreIntegrity) {
++  if (!corePackage && !reactPackage) {
++    return { publishCore: true, publishReact: true };
++  }
++  if (corePackage && !reactPackage) {
++    if (corePackage.integrity !== localCoreIntegrity) {
++      throw new Error('Published core integrity does not match the local tarball');
++    }
++    return { publishCore: false, publishReact: true };
++  }
++  if (!corePackage && reactPackage) {
++    throw new Error('React package exists while the core package is missing');
++  }
++  throw new Error('Both package versions already exist');
++}
++
++async function pathExists(filePath) {
++  try {
++    await fs.access(filePath);
++    return true;
++  } catch (error) {
++    if (error?.code === 'ENOENT') {
++      return false;
++    }
++    throw error;
++  }
++}
++
++async function readJson(filePath) {
++  return JSON.parse(await fs.readFile(filePath, 'utf8'));
++}
++
++async function writeJson(filePath, value) {
++  await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
++}
++
++export function runProcess(command, args, options = {}) {
++  return new Promise((resolve, reject) => {
++    const child = spawn(command, args, {
++      cwd: options.cwd,
++      env: options.env ?? process.env,
++      stdio: options.inherit ? 'inherit' : ['ignore', 'pipe', 'pipe']
++    });
++    let stdout = '';
++    let stderr = '';
++    if (!options.inherit) {
++      child.stdout.setEncoding('utf8');
++      child.stderr.setEncoding('utf8');
++      child.stdout.on('data', chunk => {
++        stdout += chunk;
++      });
++      child.stderr.on('data', chunk => {
++        stderr += chunk;
++      });
++    }
++    child.on('error', reject);
++    child.on('close', code => {
++      if (code !== 0) {
++        const rendered = [command, ...args].join(' ');
++        const details = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
++        reject(new Error(`Command failed (${code}): ${rendered}${details ? `\n${details}` : ''}`));
++        return;
++      }
++      resolve({ stdout, stderr, code });
++    });
++  });
++}
++
++async function listFilesRecursively(root) {
++  const files = [];
++  const entries = await fs.readdir(root, { withFileTypes: true });
++  for (const entry of entries) {
++    const entryPath = path.join(root, entry.name);
++    if (entry.isDirectory()) {
++      files.push(...(await listFilesRecursively(entryPath)));
++    } else if (entry.isFile()) {
++      files.push(entryPath);
++    }
++  }
++  return files;
++}
++
++async function requireFiles(filePaths) {
++  const missing = [];
++  for (const filePath of filePaths) {
++    if (!(await pathExists(filePath))) {
++      missing.push(filePath);
++    }
++  }
++  if (missing.length) {
++    throw new Error(`Missing build output:\n${missing.join('\n')}`);
++  }
++}
++
++async function rewriteFile(filePath, transform) {
++  const source = await fs.readFile(filePath, 'utf8');
++  const output = transform(source);
++  if (output !== source) {
++    await fs.writeFile(filePath, output);
++  }
++}
++
++function assertRegistryDependencies(manifest) {
++  for (const dependencyGroup of ['dependencies', 'peerDependencies', 'optionalDependencies']) {
++    for (const [name, version] of Object.entries(manifest[dependencyGroup] ?? {})) {
++      if (/^(workspace:|file:|link:)/.test(version)) {
++        throw new Error(`${manifest.name} contains non-registry dependency ${name}@${version}`);
++      }
++    }
++  }
++}
++
++async function validatePreparedPackage(packageRoot, manifest, expectedName, releaseVersion) {
++  if (manifest.name !== expectedName || manifest.version !== releaseVersion) {
++    throw new Error(`Generated manifest mismatch for ${expectedName}`);
++  }
++  assertRegistryDependencies(manifest);
++  await requireFiles(
++    ['main', 'module', 'types'].map(field => path.join(packageRoot, manifest[field]))
++  );
++
++  const topLevel = await fs.readdir(packageRoot);
++  const allowed = new Set(['package.json', 'README.md', 'LICENSE', 'es', 'cjs']);
++  for (const name of topLevel) {
++    if (!allowed.has(name)) {
++      throw new Error(`Unexpected generated package entry: ${name}`);
++    }
++  }
++  for (const forbidden of ['dist', 'src', 'node_modules', '.bundle', 'pnpm-lock.yaml', 'package-lock.json']) {
++    if (await pathExists(path.join(packageRoot, forbidden))) {
++      throw new Error(`Generated package contains forbidden entry: ${forbidden}`);
++    }
++  }
++}
++
++async function defaultGetGitCommit(repoRoot) {
++  return (await runProcess('git', ['rev-parse', 'HEAD'], { cwd: repoRoot })).stdout.trim();
++}
++
++export async function prepareRelease(options, dependencies = {}) {
++  const { version, skipBuild = false } = options;
++  if (!version || !SEMVER_PATTERN.test(version)) {
++    throw new Error('prepare requires a valid semver version');
++  }
++
++  const repoRoot = path.resolve(dependencies.repoRoot ?? path.resolve(SCRIPT_DIRECTORY, '..'));
++  const execute = dependencies.runProcess ?? runProcess;
++  const getGitCommit = dependencies.getGitCommit ?? defaultGetGitCommit;
++  const vtableSource = path.join(repoRoot, 'packages', 'vtable');
++  const reactSource = path.join(repoRoot, 'packages', 'react-vtable');
++  const vtableRelease = assertSafeGeneratedPath(repoRoot, path.join(repoRoot, 'release', 'k-vtable'));
++  const reactRelease = assertSafeGeneratedPath(repoRoot, path.join(repoRoot, 'release', 'k-react-vtable'));
++  const artifactsRoot = path.join(repoRoot, 'artifacts');
++
++  await requireFiles([
++    path.join(repoRoot, 'rush.json'),
++    path.join(repoRoot, 'LICENSE'),
++    path.join(vtableSource, 'package.json'),
++    path.join(reactSource, 'package.json')
++  ]);
++
++  if (!skipBuild) {
++    await execute(
++      process.execPath,
++      [path.join(repoRoot, 'common', 'scripts', 'install-run-rush.js'), 'build', '-t', '@visactor/react-vtable'],
++      { cwd: repoRoot, inherit: true }
++    );
++  }
++
++  await requireFiles(
++    [vtableSource, reactSource].flatMap(packageRoot => [
++      path.join(packageRoot, 'es', 'index.js'),
++      path.join(packageRoot, 'es', 'index.d.ts'),
++      path.join(packageRoot, 'cjs', 'index.js')
++    ])
++  );
++
++  const [vtableSourceManifest, reactSourceManifest, sourceCommit] = await Promise.all([
++    readJson(path.join(vtableSource, 'package.json')),
++    readJson(path.join(reactSource, 'package.json')),
++    getGitCommit(repoRoot)
++  ]);
++
++  await fs.mkdir(path.dirname(vtableRelease), { recursive: true });
++  await fs.mkdir(artifactsRoot, { recursive: true });
++  await Promise.all([
++    fs.rm(vtableRelease, { recursive: true, force: true }),
++    fs.rm(reactRelease, { recursive: true, force: true })
++  ]);
++  await Promise.all([fs.mkdir(vtableRelease, { recursive: true }), fs.mkdir(reactRelease, { recursive: true })]);
++
++  for (const [sourceRoot, releaseRoot] of [
++    [vtableSource, vtableRelease],
++    [reactSource, reactRelease]
++  ]) {
++    await fs.cp(path.join(sourceRoot, 'es'), path.join(releaseRoot, 'es'), { recursive: true });
++    await fs.cp(path.join(sourceRoot, 'cjs'), path.join(releaseRoot, 'cjs'), { recursive: true });
++    await fs.copyFile(path.join(sourceRoot, 'README.md'), path.join(releaseRoot, 'README.md'));
++    await fs.copyFile(path.join(repoRoot, 'LICENSE'), path.join(releaseRoot, 'LICENSE'));
++  }
++
++  const vtableManifest = buildVtableManifest(vtableSourceManifest, version);
++  const reactManifest = buildReactManifest(reactSourceManifest, version);
++  await Promise.all([
++    writeJson(path.join(vtableRelease, 'package.json'), vtableManifest),
++    writeJson(path.join(reactRelease, 'package.json'), reactManifest)
++  ]);
++
++  const reactFiles = await listFilesRecursively(reactRelease);
++  const rewriteExtensions = ['.js', '.d.ts', '.js.map'];
++  for (const filePath of reactFiles) {
++    if (rewriteExtensions.some(extension => filePath.endsWith(extension))) {
++      const isCjsRuntime =
++        filePath.startsWith(`${path.join(reactRelease, 'cjs')}${path.sep}`) &&
++        (filePath.endsWith('.js') || filePath.endsWith('.js.map'));
++      await rewriteFile(filePath, source =>
++        replaceVtableReferences(source, { format: isCjsRuntime ? 'cjs' : 'es' })
++      );
++    }
++  }
++
++  for (const [releaseRoot, upstreamVersion] of [
++    [vtableRelease, vtableSourceManifest.version],
++    [reactRelease, reactSourceManifest.version]
++  ]) {
++    for (const relativePath of ['es/index.js', 'cjs/index.js', 'es/index.js.map', 'cjs/index.js.map']) {
++      const filePath = path.join(releaseRoot, relativePath);
++      if (await pathExists(filePath)) {
++        await rewriteFile(filePath, source => rewriteEntryVersion(source, upstreamVersion, version));
++      }
++    }
++  }
++
++  await Promise.all([
++    validatePreparedPackage(vtableRelease, vtableManifest, 'k-vtable', version),
++    validatePreparedPackage(reactRelease, reactManifest, 'k-react-vtable', version)
++  ]);
++
++  const runtimeVersionSet = new Set(Object.keys(RUNTIME_VERSIONS).map(name => vtableManifest.dependencies[name]));
++  if (runtimeVersionSet.size !== 1 || !runtimeVersionSet.has(RUNTIME_VERSIONS['@visactor/vrender-core'])) {
++    throw new Error('VRender runtime versions are not aligned');
++  }
++
++  for (const filePath of await listFilesRecursively(reactRelease)) {
++    if (!rewriteExtensions.some(extension => filePath.endsWith(extension))) {
++      continue;
++    }
++    const content = await fs.readFile(filePath, 'utf8');
++    if (/@visactor\/vtable(?=\/|['"`]|$)/.test(content)) {
++      throw new Error(`Upstream VTable reference remains in ${path.relative(reactRelease, filePath)}`);
++    }
++    if (filePath.endsWith('.js') && content.includes('CanvasFactory is not configured')) {
++      throw new Error(`React output appears to contain bundled VTable core: ${path.relative(reactRelease, filePath)}`);
++    }
++  }
++
++  const state = {
++    version,
++    sourceCommit,
++    preparedAt: new Date().toISOString(),
++    packages: {
++      'k-vtable': vtableRelease,
++      'k-react-vtable': reactRelease
++    }
++  };
++  const statePath = assertSafeGeneratedPath(
++    repoRoot,
++    path.join(artifactsRoot, `k-release-${version}.prepare.json`)
++  );
++  await writeJson(statePath, state);
++  return state;
++}
++
++function parseNpmPackResult(stdout, label) {
++  let parsed;
++  try {
++    parsed = JSON.parse(stdout);
++  } catch (error) {
++    throw new Error(`Unable to parse npm pack JSON for ${label}: ${error.message}`);
++  }
++  const result = Array.isArray(parsed) ? parsed[0] : parsed;
++  if (!result || typeof result !== 'object') {
++    throw new Error(`npm pack returned no result for ${label}`);
++  }
++  return result;
++}
++
++export async function packRelease(options, dependencies = {}) {
++  const { version } = options;
++  if (!version || !SEMVER_PATTERN.test(version)) {
++    throw new Error('pack requires a valid semver version');
++  }
++
++  const repoRoot = path.resolve(dependencies.repoRoot ?? path.resolve(SCRIPT_DIRECTORY, '..'));
++  const execute = dependencies.runProcess ?? runProcess;
++  const getGitCommit = dependencies.getGitCommit ?? defaultGetGitCommit;
++  const runConsumerTests = dependencies.runConsumerTests ?? runCleanConsumerTests;
++
++  const artifactsRoot = path.join(repoRoot, 'artifacts');
++  const prepareStatePath = assertSafeGeneratedPath(
++    repoRoot,
++    path.join(artifactsRoot, `k-release-${version}.prepare.json`)
++  );
++  if (!(await pathExists(prepareStatePath))) {
++    throw new Error(`Missing prepare state for ${version}; run prepare first`);
++  }
++  const prepareState = await readJson(prepareStatePath);
++  const sourceCommit = await getGitCommit(repoRoot);
++  if (prepareState.version !== version || prepareState.sourceCommit !== sourceCommit) {
++    throw new Error('Prepare state does not match the requested version and current source commit');
++  }
++
++  const packageRoots = {
++    'k-vtable': path.join(repoRoot, 'release', 'k-vtable'),
++    'k-react-vtable': path.join(repoRoot, 'release', 'k-react-vtable')
++  };
++  await requireFiles(Object.values(packageRoots).map(packageRoot => path.join(packageRoot, 'package.json')));
++
++  for (const [packageName, packageRoot] of Object.entries(packageRoots)) {
++    const dryRun = await execute('npm', ['pack', '--dry-run', '--json'], { cwd: packageRoot });
++    validatePackFileList(parseNpmPackResult(dryRun.stdout, packageName));
++  }
++
++  await fs.mkdir(artifactsRoot, { recursive: true });
++  const tarballs = {};
++  for (const [packageName, packageRoot] of Object.entries(packageRoots)) {
++    const packed = await execute('npm', ['pack', '--json', '--pack-destination', artifactsRoot], { cwd: packageRoot });
++    const result = parseNpmPackResult(packed.stdout, packageName);
++    validatePackFileList(result);
++    if (!result.filename || !result.integrity || !result.shasum) {
++      throw new Error(`npm pack metadata is incomplete for ${packageName}`);
++    }
++    const tarballPath = assertSafeGeneratedPath(repoRoot, path.join(artifactsRoot, path.basename(result.filename)));
++    await requireFiles([tarballPath]);
++    tarballs[packageName] = {
++      filename: path.basename(result.filename),
++      path: tarballPath,
++      integrity: result.integrity,
++      shasum: result.shasum
++    };
++  }
++
++  await runConsumerTests({ repoRoot, version, tarballs, runProcess: execute });
++
++  const state = {
++    version,
++    sourceCommit,
++    packedAt: new Date().toISOString(),
++    testsPassed: true,
++    tarballs
++  };
++  const statePath = assertSafeGeneratedPath(repoRoot, path.join(artifactsRoot, `k-release-${version}.pack.json`));
++  await writeJson(statePath, state);
++  return state;
++}
++
++export function collectPackageVersions(tree, packageNames) {
++  const requested = new Set(packageNames);
++  const result = new Map(packageNames.map(name => [name, new Set()]));
++  const visited = new Set();
++
++  function visit(node) {
++    if (!node || typeof node !== 'object' || visited.has(node)) {
++      return;
++    }
++    visited.add(node);
++    if (requested.has(node.name) && typeof node.version === 'string') {
++      result.get(node.name).add(node.version);
++    }
++    for (const groupName of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
++      const group = node[groupName];
++      if (!group || typeof group !== 'object') {
++        continue;
++      }
++      for (const [name, dependency] of Object.entries(group)) {
++        if (requested.has(name) && typeof dependency?.version === 'string') {
++          result.get(name).add(dependency.version);
++        }
++        visit(dependency);
++      }
++    }
++  }
++
++  for (const root of Array.isArray(tree) ? tree : [tree]) {
++    visit(root);
++  }
++  return result;
++}
++
++export async function createConsumerProject({ projectRoot, version, tarballs }) {
++  await fs.mkdir(path.join(projectRoot, 'src'), { recursive: true });
++  const manifest = {
++    name: 'k-vtable-release-consumer',
++    version: '0.0.0',
++    private: true,
++    type: 'module',
++    dependencies: {
++      'k-vtable': `file:${tarballs['k-vtable'].path}`,
++      'k-react-vtable': `file:${tarballs['k-react-vtable'].path}`,
++      '@visactor/vchart': '2.1.3',
++      react: '18.2.0',
++      'react-dom': '18.2.0'
++    },
++    devDependencies: {
++      '@types/react': '18.2.79',
++      '@types/react-dom': '18.2.25',
++      typescript: '5.2.2',
++      vite: '3.2.6'
++    }
++  };
++  await writeJson(path.join(projectRoot, 'package.json'), manifest);
++  await writeJson(path.join(projectRoot, 'tsconfig.json'), {
++    compilerOptions: {
++      target: 'ES2020',
++      module: 'ESNext',
++      moduleResolution: 'Bundler',
++      lib: ['ES2020', 'DOM'],
++      jsx: 'react-jsx',
++      strict: true,
++      noEmit: true,
++      skipLibCheck: true
++    },
++    include: ['type-probe.ts']
++  });
++  await fs.writeFile(
++    path.join(projectRoot, 'type-probe.ts'),
++    [
++      "import type { ComponentProps } from 'react';",
++      "import type { IGroup } from 'k-vtable/es/vrender';",
++      "import type { BaseTableAPI, ListTableConstructorOptions } from 'k-vtable/es/ts-types';",
++      "import { ListTable } from 'k-react-vtable';",
++      'type ListTableProps = ComponentProps<typeof ListTable>;',
++      'declare const group: IGroup;',
++      'declare const table: BaseTableAPI;',
++      'declare const options: ListTableConstructorOptions;',
++      'declare const props: ListTableProps;',
++      'void group; void table; void options; void props;'
++    ].join('\n') + '\n'
++  );
++  await fs.writeFile(
++    path.join(projectRoot, 'cjs-probe.cjs'),
++    [
++      "const assert = require('node:assert/strict');",
++      "const core = require('k-vtable');",
++      "const react = require('k-react-vtable');",
++      `assert.equal(core.version, ${JSON.stringify(version)});`,
++      `assert.equal(react.version, ${JSON.stringify(version)});`
++    ].join('\n') + '\n'
++  );
++  await fs.writeFile(
++    path.join(projectRoot, 'esm-probe.mjs'),
++    [
++      "import assert from 'node:assert/strict';",
++      "import * as core from 'k-vtable';",
++      "import * as react from 'k-react-vtable';",
++      `assert.equal(core.version, ${JSON.stringify(version)});`,
++      `assert.equal(react.version, ${JSON.stringify(version)});`
++    ].join('\n') + '\n'
++  );
++  await fs.writeFile(path.join(projectRoot, 'vite.config.js'), "export default { base: './', build: { sourcemap: true } };\n");
++  await fs.writeFile(
++    path.join(projectRoot, 'index.html'),
++    '<!doctype html><html data-test-status="running"><head><meta charset="UTF-8"></head><body><div id="status">running</div><div id="plain"></div><div id="react"></div><div id="pivot"></div><script type="module" src="/src/main.js"></script></body></html>\n'
++  );
++  await fs.writeFile(
++    path.join(projectRoot, 'src', 'main.js'),
++    `import React from 'react';
++import { createRoot } from 'react-dom/client';
++import VChart from '@visactor/vchart';
++import * as VTable from 'k-vtable';
++import * as ReactVTable from 'k-react-vtable';
++
++const status = document.getElementById('status');
++let failed = false;
++function fail(error) {
++  failed = true;
++  const message = error?.stack || error?.message || String(error);
++  document.documentElement.dataset.testStatus = 'failed';
++  status.textContent = message;
++}
++window.addEventListener('error', event => fail(event.error || event.message));
++window.addEventListener('unhandledrejection', event => fail(event.reason));
++
++async function run() {
++  if (VTable.version !== ${JSON.stringify(version)} || ReactVTable.version !== ${JSON.stringify(version)}) {
++    throw new Error('Runtime version mismatch');
++  }
++  const plainContainer = document.getElementById('plain');
++  plainContainer.style.cssText = 'width:600px;height:320px';
++  const columns = [{ field: 'name', title: 'Name' }, { field: 'value', title: 'Value' }];
++  const records = [{ name: 'A', value: 1 }, { name: 'B', value: 2 }, { name: 'C', value: 3 }];
++  const table = new VTable.ListTable(plainContainer, { columns, records, frozenRowCount: 2 });
++  if (table.frozenRowCount !== 2) throw new Error('Frozen row verification failed');
++  table.release();
++
++  let customLayoutCalls = 0;
++  const reactContainer = document.getElementById('react');
++  reactContainer.style.cssText = 'width:600px;height:320px';
++  const root = createRoot(reactContainer);
++  root.render(
++    React.createElement(
++      ReactVTable.ListTable,
++      { records, height: 300 },
++      React.createElement(ReactVTable.ListColumn, { field: 'name', title: 'Name' }),
++      React.createElement(ReactVTable.ListColumn, {
++        field: 'value',
++        title: 'Value',
++        customLayout: () => {
++          customLayoutCalls++;
++          return { rootContainer: new VTable.Group({}), renderDefault: true };
++        }
++      })
++    )
++  );
++  await new Promise(resolve => setTimeout(resolve, 800));
++  if (customLayoutCalls === 0) throw new Error('React customLayout was not invoked');
++  root.unmount();
++
++  VTable.register.chartModule('vchart', VChart);
++  const pivotContainer = document.getElementById('pivot');
++  pivotContainer.style.cssText = 'width:600px;height:320px';
++  const pivot = new VTable.PivotChart(pivotContainer, {
++    rows: [{ dimensionKey: 'year', title: 'Year' }],
++    columns: [{ dimensionKey: 'region', title: 'Region' }],
++    indicators: [{
++      indicatorKey: 'sales',
++      title: 'Sales',
++      cellType: 'chart',
++      chartModule: 'vchart',
++      chartSpec: { type: 'bar', xField: 'category', yField: 'sales', data: { id: 'baseData' } }
++    }],
++    records: [{ year: '2024', region: 'East', category: 'A', sales: 10 }],
++    defaultRowHeight: 180,
++    defaultColWidth: 240
++  });
++  await new Promise(resolve => setTimeout(resolve, 800));
++  pivot.release();
++
++  const renderedError = status.textContent || '';
++  if (/CanvasFactory|Context2dFactory/.test(renderedError)) throw new Error(renderedError);
++  if (!failed) {
++    document.documentElement.dataset.testStatus = 'passed';
++    status.textContent = 'passed';
++  }
++}
++run().catch(fail);
++`
++  );
++}
++
++async function findChromeExecutable() {
++  const candidates =
++    process.platform === 'darwin'
++      ? [
++          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
++          '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
++          '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
++          '/Applications/Chromium.app/Contents/MacOS/Chromium'
++        ]
++      : process.platform === 'win32'
++        ? [
++            path.join(process.env.PROGRAMFILES ?? '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
++            path.join(process.env['PROGRAMFILES(X86)'] ?? '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
++            path.join(process.env.LOCALAPPDATA ?? '', 'Google', 'Chrome', 'Application', 'chrome.exe')
++          ]
++        : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
++  for (const candidate of candidates) {
++    if (candidate && (await pathExists(candidate))) {
++      return candidate;
++    }
++  }
++  throw new Error('A system Chrome/Chromium executable is required for browser release verification');
++}
++
++function assertOnlyVersion(versions, packageName, expectedVersion) {
++  const found = versions.get(packageName) ?? new Set();
++  if (found.size !== 1 || !found.has(expectedVersion)) {
++    throw new Error(`${packageName} must resolve only to ${expectedVersion}; found ${[...found].join(', ') || 'none'}`);
++  }
++}
++
++export async function runCleanConsumerTests({
++  repoRoot,
++  version,
++  tarballs,
++  runProcess: execute = runProcess,
++  chromeExecutable,
++  projectRoot: requestedProjectRoot,
++  keepTemp = false
++}) {
++  const projectRoot = requestedProjectRoot ?? (await fs.mkdtemp(path.join(os.tmpdir(), 'k-vtable-consumer-')));
++  try {
++    await createConsumerProject({ projectRoot, version, tarballs });
++    const pnpmBinary = path.join(repoRoot, 'common', 'temp', 'pnpm-local', 'node_modules', '.bin', 'pnpm');
++    await requireFiles([pnpmBinary]);
++
++    await execute(pnpmBinary, ['install', '--frozen-lockfile=false'], { cwd: projectRoot });
++    const listed = await execute(pnpmBinary, ['list', '--depth', 'Infinity', '--json'], { cwd: projectRoot });
++    let dependencyTree;
++    try {
++      dependencyTree = JSON.parse(listed.stdout);
++    } catch (error) {
++      throw new Error(`Unable to parse pnpm dependency tree: ${error.message}`);
++    }
++
++    const packageNames = ['k-vtable', 'k-react-vtable', ...Object.keys(RUNTIME_VERSIONS)];
++    const versions = collectPackageVersions(dependencyTree, packageNames);
++    assertOnlyVersion(versions, 'k-vtable', version);
++    assertOnlyVersion(versions, 'k-react-vtable', version);
++    for (const [packageName, expectedVersion] of Object.entries(RUNTIME_VERSIONS)) {
++      assertOnlyVersion(versions, packageName, expectedVersion);
++    }
++
++    await execute(process.execPath, [path.join(projectRoot, 'cjs-probe.cjs')], { cwd: projectRoot });
++    await execute(process.execPath, [path.join(projectRoot, 'esm-probe.mjs')], { cwd: projectRoot });
++    await execute(pnpmBinary, ['exec', 'tsc', '--noEmit'], { cwd: projectRoot });
++    await execute(pnpmBinary, ['exec', 'vite', 'build'], { cwd: projectRoot });
++
++    const chrome = chromeExecutable ?? (await findChromeExecutable());
++    const browserResult = await execute(
++      chrome,
++      [
++        '--headless',
++        '--disable-gpu',
++        '--no-sandbox',
++        '--allow-file-access-from-files',
++        '--run-all-compositor-stages-before-draw',
++        '--virtual-time-budget=12000',
++        '--dump-dom',
++        pathToFileURL(path.join(projectRoot, 'dist', 'index.html')).href
++      ],
++      { cwd: projectRoot }
++    );
++    if (!/data-test-status=["']passed["']/.test(browserResult.stdout)) {
++      throw new Error(`Browser verification did not pass:\n${browserResult.stdout.slice(-4000)}`);
++    }
++    if (/CanvasFactory is not configured|Context2dFactory/.test(browserResult.stdout)) {
++      throw new Error('Browser verification exposed a VRender factory configuration error');
++    }
++
++    return { projectRoot, dependencyVersions: versions };
++  } finally {
++    if (!keepTemp) {
++      await fs.rm(projectRoot, { recursive: true, force: true });
++    }
++  }
++}
++
++function registryArgs(registry) {
++  return registry ? ['--registry', registry] : [];
++}
++
++async function queryPublishedPackage(execute, packageName, version, registry) {
++  try {
++    const result = await execute(
++      'npm',
++      ['view', `${packageName}@${version}`, 'version', 'dist.integrity', '--json', ...registryArgs(registry)],
++      {}
++    );
++    const parsed = JSON.parse(result.stdout);
++    return {
++      version: parsed.version ?? version,
++      integrity: parsed.dist?.integrity ?? parsed['dist.integrity']
++    };
++  } catch (error) {
++    if (error?.code === 'E404' || /\bE404\b|404 Not Found|is not in this registry/i.test(error?.message ?? '')) {
++      return undefined;
++    }
++    throw error;
++  }
++}
++
++async function waitForPublishedPackage({ execute, packageName, version, integrity, registry, wait }) {
++  for (let attempt = 0; attempt < 12; attempt++) {
++    const published = await queryPublishedPackage(execute, packageName, version, registry);
++    if (published) {
++      if (published.integrity !== integrity) {
++        throw new Error(`${packageName}@${version} registry integrity does not match the packed tarball`);
++      }
++      return published;
++    }
++    await wait(5000);
++  }
++  throw new Error(`${packageName}@${version} did not become visible in the registry`);
++}
++
++export async function publishRelease(options, dependencies = {}) {
++  const { version, tag, registry } = options;
++  if (!version || !SEMVER_PATTERN.test(version)) {
++    throw new Error('publish requires a valid semver version');
++  }
++  if (!tag) {
++    throw new Error('publish requires --tag');
++  }
++
++  const repoRoot = path.resolve(dependencies.repoRoot ?? path.resolve(SCRIPT_DIRECTORY, '..'));
++  const execute = dependencies.runProcess ?? runProcess;
++  const getGitCommit = dependencies.getGitCommit ?? defaultGetGitCommit;
++  const wait = dependencies.wait ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)));
++  const statePath = assertSafeGeneratedPath(
++    repoRoot,
++    path.join(repoRoot, 'artifacts', `k-release-${version}.pack.json`)
++  );
++  if (!(await pathExists(statePath))) {
++    throw new Error(`Missing verified pack state for ${version}`);
++  }
++  const state = await readJson(statePath);
++  if (state.version !== version || state.testsPassed !== true) {
++    throw new Error('Pack state is not verified for the requested version');
++  }
++  const sourceCommit = await getGitCommit(repoRoot);
++  if (state.sourceCommit !== sourceCommit) {
++    throw new Error('Pack state source commit does not match the current repository');
++  }
++
++  for (const packageName of ['k-vtable', 'k-react-vtable']) {
++    const tarball = state.tarballs?.[packageName];
++    if (!tarball?.path || !tarball?.filename || !tarball?.integrity || !tarball?.shasum) {
++      throw new Error(`Pack state is missing ${packageName} tarball metadata`);
++    }
++    const safePath = assertSafeGeneratedPath(repoRoot, tarball.path);
++    if (path.basename(safePath) !== tarball.filename) {
++      throw new Error(`${packageName} tarball filename does not match its path`);
++    }
++    await requireFiles([safePath]);
++  }
++
++  await execute('npm', ['whoami', ...registryArgs(registry)], {});
++  const [corePackage, reactPackage] = await Promise.all([
++    queryPublishedPackage(execute, 'k-vtable', version, registry),
++    queryPublishedPackage(execute, 'k-react-vtable', version, registry)
++  ]);
++  const mode = resolvePublishMode(corePackage, reactPackage, state.tarballs['k-vtable'].integrity);
++
++  if (mode.publishCore) {
++    await execute(
++      'npm',
++      ['publish', state.tarballs['k-vtable'].path, '--tag', tag, ...registryArgs(registry)],
++      { cwd: repoRoot, inherit: true }
++    );
++    await waitForPublishedPackage({
++      execute,
++      packageName: 'k-vtable',
++      version,
++      integrity: state.tarballs['k-vtable'].integrity,
++      registry,
++      wait
++    });
++  }
++
++  if (mode.publishReact) {
++    await execute(
++      'npm',
++      ['publish', state.tarballs['k-react-vtable'].path, '--tag', tag, ...registryArgs(registry)],
++      { cwd: repoRoot, inherit: true }
++    );
++    await waitForPublishedPackage({
++      execute,
++      packageName: 'k-react-vtable',
++      version,
++      integrity: state.tarballs['k-react-vtable'].integrity,
++      registry,
++      wait
++    });
++  }
++
++  return { publishedCore: mode.publishCore, publishedReact: mode.publishReact };
++}
++
++async function main() {
++  const options = parseCliArgs(process.argv.slice(2));
++  let result;
++  if (options.command === 'prepare') {
++    result = await prepareRelease(options);
++  } else if (options.command === 'pack') {
++    result = await packRelease(options);
++  } else {
++    result = await publishRelease(options);
++  }
++  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
++}
++
++if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  main().catch(error => {
++    process.stderr.write(`${error?.stack ?? error}\n`);
++    process.exitCode = 1;
++  });
++}
+diff --git a/scripts/k-release.test.mjs b/scripts/k-release.test.mjs
+new file mode 100644
+index 000000000..7d34d63ab
+--- /dev/null
++++ b/scripts/k-release.test.mjs
+@@ -0,0 +1,590 @@
++import assert from 'node:assert/strict';
++import fs from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import test from 'node:test';
++
++import {
++  RUNTIME_VERSIONS,
++  assertSafeGeneratedPath,
++  buildReactManifest,
++  buildVtableManifest,
++  collectPackageVersions,
++  createConsumerProject,
++  packRelease,
++  parseCliArgs,
++  prepareRelease,
++  publishRelease,
++  replaceVtableReferences,
++  resolvePublishMode,
++  runProcess,
++  runCleanConsumerTests,
++  rewriteEntryVersion,
++  validatePackFileList
++} from './k-release.mjs';
++
++const vtableFixture = {
++  name: '@visactor/vtable',
++  version: '1.26.5',
++  description: 'VTable',
++  main: 'cjs/index.js',
++  module: 'es/index.js',
++  types: 'es/index.d.ts',
++  scripts: { build: 'bundler' },
++  devDependencies: { typescript: '5.2.2' },
++  dependencies: {
++    '@visactor/vtable-editors': 'workspace:1.26.5',
++    '@visactor/vrender': '1.1.4',
++    '@visactor/vrender-core': '1.1.4',
++    '@visactor/vrender-kits': '1.1.4',
++    '@visactor/vrender-components': '1.1.4',
++    '@visactor/vrender-animate': '1.1.4',
++    lodash: '4.17.21'
++  }
++};
++
++const reactFixture = {
++  name: '@visactor/react-vtable',
++  version: '1.26.5',
++  description: 'React VTable',
++  main: 'cjs/index.js',
++  module: 'es/index.js',
++  types: 'es/index.d.ts',
++  exports: {
++    '.': {
++      require: './cjs/index.js',
++      import: './es/index.js'
++    }
++  },
++  scripts: { build: 'bundler' },
++  devDependencies: { typescript: '5.2.2' },
++  dependencies: {
++    '@visactor/vtable': 'workspace:1.26.5',
++    '@visactor/vutils': '~1.0.17',
++    'react-is': '^18.2.0',
++    'react-reconciler': '0.29.0'
++  },
++  peerDependencies: {
++    react: '^18.2.0 || ^19.0.0',
++    'react-dom': '^18.2.0 || ^19.0.0'
++  }
++};
++
++async function createFixtureRepo(t) {
++  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-fixture-'));
++  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
++  await fs.mkdir(path.join(repoRoot, 'packages', 'vtable', 'es'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'vtable', 'cjs'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'react-vtable', 'es'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'react-vtable', 'cjs'), { recursive: true });
++  await fs.writeFile(path.join(repoRoot, 'rush.json'), JSON.stringify({ pnpmVersion: '10.7.0' }));
++  await fs.writeFile(path.join(repoRoot, 'LICENSE'), 'license');
++  for (const [packageFolder, manifest] of [
++    ['vtable', vtableFixture],
++    ['react-vtable', reactFixture]
++  ]) {
++    const packageRoot = path.join(repoRoot, 'packages', packageFolder);
++    await fs.writeFile(path.join(packageRoot, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
++    await fs.writeFile(path.join(packageRoot, 'README.md'), `${packageFolder} readme`);
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.d.ts'), 'export declare const version: string;\n');
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.js'), 'export const version = "1.26.5";\n');
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.js.map'), '{"versionText":"1.26.5"}\n');
++    await fs.writeFile(path.join(packageRoot, 'cjs', 'index.js'), 'exports.version = "1.26.5";\n');
++    await fs.writeFile(path.join(packageRoot, 'cjs', 'index.js.map'), '{"versionText":"1.26.5"}\n');
++  }
++  return repoRoot;
++}
++
++test('parseCliArgs parses prepare arguments', () => {
++  assert.deepEqual(parseCliArgs(['prepare', '--version', '1.0.40', '--skip-build']), {
++    command: 'prepare',
++    version: '1.0.40',
++    registry: undefined,
++    tag: undefined,
++    skipBuild: true
++  });
++});
++
++test('parseCliArgs rejects invalid commands and versions', () => {
++  assert.throws(() => parseCliArgs(['unknown', '--version', '1.0.40']), /command/i);
++  assert.throws(() => parseCliArgs(['prepare', '--version', 'latest']), /valid semver/i);
++  assert.throws(() => parseCliArgs(['publish', '--version', '1.0.40']), /--tag/);
++  assert.throws(() => parseCliArgs(['pack', '--version', '1.0.40', '--skip-build']), /prepare/);
++});
++
++test('runProcess includes stdout and stderr when a command fails', async () => {
++  await assert.rejects(
++    runProcess(
++      process.execPath,
++      [
++        '-e',
++        'process.stdout.write(process.env.K_RELEASE_TEST_STDOUT); process.stderr.write(process.env.K_RELEASE_TEST_STDERR); process.exit(2)'
++      ],
++      {
++        env: {
++          ...process.env,
++          K_RELEASE_TEST_STDOUT: 'stdout detail',
++          K_RELEASE_TEST_STDERR: 'stderr detail'
++        }
++      }
++    ),
++    error => {
++      assert.match(error.message, /stdout detail/);
++      assert.match(error.message, /stderr detail/);
++      return true;
++    }
++  );
++});
++
++test('buildVtableManifest creates a registry-safe k-vtable manifest', () => {
++  const manifest = buildVtableManifest(vtableFixture, '2.0.0');
++
++  assert.equal(manifest.name, 'k-vtable');
++  assert.equal(manifest.version, '2.0.0');
++  assert.equal(manifest.scripts, undefined);
++  assert.equal(manifest.devDependencies, undefined);
++  assert.deepEqual(manifest.files, ['cjs', 'es']);
++  assert.equal(manifest.dependencies['@visactor/vtable-editors'], '1.26.5');
++  assert.equal(manifest.dependencies.lodash, '4.17.21');
++  assert.deepEqual(
++    Object.fromEntries(Object.keys(RUNTIME_VERSIONS).map(name => [name, manifest.dependencies[name]])),
++    RUNTIME_VERSIONS
++  );
++  assert.deepEqual(manifest.publishConfig, { access: 'public' });
++});
++
++test('buildReactManifest replaces the upstream core dependency with an exact peer', () => {
++  const manifest = buildReactManifest(reactFixture, '2.0.0');
++
++  assert.equal(manifest.name, 'k-react-vtable');
++  assert.equal(manifest.version, '2.0.0');
++  assert.equal(manifest.dependencies['@visactor/vtable'], undefined);
++  assert.equal(manifest.dependencies['@visactor/vutils'], '~1.0.17');
++  assert.equal(manifest.peerDependencies['k-vtable'], '2.0.0');
++  assert.equal(manifest.peerDependencies.react, '^18.2.0 || ^19.0.0');
++  assert.equal(manifest.peerDependencies['react-dom'], '^18.2.0 || ^19.0.0');
++  assert.equal(manifest.exports, undefined);
++  assert.equal(manifest.devDependencies, undefined);
++  assert.deepEqual(manifest.files, ['cjs', 'es']);
++});
++
++test('replaceVtableReferences rewrites only the exact package identity', () => {
++  const source = [
++    "from '@visactor/vtable';",
++    "from '@visactor/vtable/es/core';",
++    "from '@visactor/vtable-editors';",
++    "from '@visactor/vtable-plugins';",
++    'sourceRoot=@visactor/vtable'
++  ].join('\n');
++
++  assert.equal(
++    replaceVtableReferences(source),
++    [
++      "from 'k-vtable';",
++      "from 'k-vtable/es/core';",
++      "from '@visactor/vtable-editors';",
++      "from '@visactor/vtable-plugins';",
++      'sourceRoot=k-vtable'
++    ].join('\n')
++  );
++});
++
++test('replaceVtableReferences routes CJS runtime deep imports to k-vtable/cjs', () => {
++  assert.equal(
++    replaceVtableReferences(
++      "const vrender = require('@visactor/vtable/es/vrender'); const core = require('@visactor/vtable');",
++      { format: 'cjs' }
++    ),
++    "const vrender = require('k-vtable/cjs/vrender'); const core = require('k-vtable');"
++  );
++});
++
++test('rewriteEntryVersion requires exactly one exported version literal', () => {
++  assert.equal(
++    rewriteEntryVersion('export const version = "1.26.5";', '1.26.5', '2.0.0'),
++    'export const version = "2.0.0";'
++  );
++  assert.equal(
++    rewriteEntryVersion('exports.version = "1.26.5";', '1.26.5', '2.0.0'),
++    'exports.version = "2.0.0";'
++  );
++  assert.throws(() => rewriteEntryVersion('export const version = "1.0.0";', '1.26.5', '2.0.0'), /expected version/i);
++  assert.throws(
++    () => rewriteEntryVersion('export const version = "1.26.5"; const old = "1.26.5";', '1.26.5', '2.0.0'),
++    /exactly once/i
++  );
++});
++
++test('assertSafeGeneratedPath accepts only direct generated children', () => {
++  const root = path.resolve('/workspace/VTable');
++
++  assert.equal(
++    assertSafeGeneratedPath(root, path.join(root, 'release', 'k-vtable')),
++    path.join(root, 'release', 'k-vtable')
++  );
++  assert.equal(
++    assertSafeGeneratedPath(root, path.join(root, 'artifacts', 'k-vtable-2.0.0.tgz')),
++    path.join(root, 'artifacts', 'k-vtable-2.0.0.tgz')
++  );
++  assert.throws(() => assertSafeGeneratedPath(root, root), /generated path/i);
++  assert.throws(() => assertSafeGeneratedPath(root, path.join(root, 'release')), /generated path/i);
++  assert.throws(() => assertSafeGeneratedPath(root, path.resolve('/workspace/other')), /generated path/i);
++  assert.throws(() => assertSafeGeneratedPath(root, path.join(root, 'release', 'nested', 'file')), /generated path/i);
++});
++
++test('validatePackFileList permits only the documented package surface', () => {
++  const valid = {
++    files: [
++      { path: 'package.json' },
++      { path: 'README.md' },
++      { path: 'LICENSE' },
++      { path: 'es/index.js' },
++      { path: 'es/index.d.ts' },
++      { path: 'cjs/index.js' }
++    ]
++  };
++
++  assert.doesNotThrow(() => validatePackFileList(valid));
++  assert.throws(() => validatePackFileList({ files: [...valid.files, { path: 'dist/index.js' }] }), /dist/);
++  assert.throws(() => validatePackFileList({ files: [...valid.files, { path: 'src/index.ts' }] }), /src/);
++  assert.throws(() => validatePackFileList({ files: [...valid.files, { path: 'pnpm-lock.yaml' }] }), /pnpm-lock/);
++});
++
++test('resolvePublishMode distinguishes first publish and safe React resume', () => {
++  assert.deepEqual(resolvePublishMode(undefined, undefined, 'sha512-local'), {
++    publishCore: true,
++    publishReact: true
++  });
++  assert.deepEqual(resolvePublishMode({ integrity: 'sha512-local' }, undefined, 'sha512-local'), {
++    publishCore: false,
++    publishReact: true
++  });
++  assert.throws(() => resolvePublishMode({ integrity: 'sha512-other' }, undefined, 'sha512-local'), /integrity/i);
++  assert.throws(() => resolvePublishMode(undefined, { integrity: 'sha512-react' }, 'sha512-local'), /React/i);
++  assert.throws(
++    () => resolvePublishMode({ integrity: 'sha512-local' }, { integrity: 'sha512-react' }, 'sha512-local'),
++    /already exist/i
++  );
++});
++
++test('prepareRelease generates isolated k packages from existing build output', async t => {
++  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-prepare-'));
++  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
++
++  await fs.mkdir(path.join(repoRoot, 'packages', 'vtable', 'es'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'vtable', 'cjs'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'react-vtable', 'es'), { recursive: true });
++  await fs.mkdir(path.join(repoRoot, 'packages', 'react-vtable', 'cjs'), { recursive: true });
++  await fs.writeFile(path.join(repoRoot, 'rush.json'), JSON.stringify({ pnpmVersion: '10.7.0' }));
++  await fs.writeFile(path.join(repoRoot, 'LICENSE'), 'license');
++
++  for (const [packageFolder, manifest] of [
++    ['vtable', vtableFixture],
++    ['react-vtable', reactFixture]
++  ]) {
++    const packageRoot = path.join(repoRoot, 'packages', packageFolder);
++    await fs.writeFile(path.join(packageRoot, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
++    await fs.writeFile(path.join(packageRoot, 'README.md'), `${packageFolder} readme`);
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.d.ts'), 'export declare const version: string;\n');
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.js'), 'export const version = "1.26.5";\n');
++    await fs.writeFile(path.join(packageRoot, 'es', 'index.js.map'), '{"versionText":"1.26.5"}\n');
++    await fs.writeFile(path.join(packageRoot, 'cjs', 'index.js'), 'exports.version = "1.26.5";\n');
++    await fs.writeFile(path.join(packageRoot, 'cjs', 'index.js.map'), '{"versionText":"1.26.5"}\n');
++  }
++
++  const reactEsSource = [
++    "export * from '@visactor/vtable';",
++    "export * from '@visactor/vtable/es/core';",
++    "export * from '@visactor/vtable-editors';"
++  ].join('\n');
++  await fs.writeFile(path.join(repoRoot, 'packages', 'react-vtable', 'es', 'component.js'), reactEsSource);
++  await fs.writeFile(
++    path.join(repoRoot, 'packages', 'react-vtable', 'cjs', 'component.js'),
++    "require('@visactor/vtable'); require('@visactor/vtable-plugins');\n"
++  );
++
++  const result = await prepareRelease(
++    { version: '2.0.0', skipBuild: true },
++    { repoRoot, getGitCommit: async () => 'abc123' }
++  );
++
++  assert.equal(result.version, '2.0.0');
++  assert.equal(result.sourceCommit, 'abc123');
++  const vtableManifest = JSON.parse(await fs.readFile(path.join(repoRoot, 'release', 'k-vtable', 'package.json')));
++  const reactManifest = JSON.parse(await fs.readFile(path.join(repoRoot, 'release', 'k-react-vtable', 'package.json')));
++  assert.equal(vtableManifest.name, 'k-vtable');
++  assert.equal(reactManifest.peerDependencies['k-vtable'], '2.0.0');
++  assert.match(
++    await fs.readFile(path.join(repoRoot, 'release', 'k-react-vtable', 'es', 'component.js'), 'utf8'),
++    /k-vtable\/es\/core/
++  );
++  assert.match(
++    await fs.readFile(path.join(repoRoot, 'release', 'k-react-vtable', 'es', 'component.js'), 'utf8'),
++    /@visactor\/vtable-editors/
++  );
++  assert.match(await fs.readFile(path.join(repoRoot, 'release', 'k-vtable', 'es', 'index.js'), 'utf8'), /2\.0\.0/);
++  assert.equal(
++    await fs.readFile(path.join(repoRoot, 'packages', 'react-vtable', 'es', 'component.js'), 'utf8'),
++    reactEsSource
++  );
++  assert.equal(
++    JSON.parse(await fs.readFile(path.join(repoRoot, 'artifacts', 'k-release-2.0.0.prepare.json'))).sourceCommit,
++    'abc123'
++  );
++  await assert.rejects(fs.access(path.join(repoRoot, 'release', 'k-vtable', 'dist')), /ENOENT/);
++});
++
++test('packRelease records exact tarballs only after consumer verification passes', async t => {
++  const repoRoot = await createFixtureRepo(t);
++  await prepareRelease(
++    { version: '2.0.0', skipBuild: true },
++    { repoRoot, getGitCommit: async () => 'abc123' }
++  );
++
++  const packedNames = [];
++  const fakeRunProcess = async (command, args, options) => {
++    assert.equal(command, 'npm');
++    assert.equal(args[0], 'pack');
++    const packageName = path.basename(options.cwd);
++    const files = [
++      { path: 'package.json' },
++      { path: 'README.md' },
++      { path: 'LICENSE' },
++      { path: 'es/index.js' },
++      { path: 'es/index.d.ts' },
++      { path: 'cjs/index.js' }
++    ];
++    if (args.includes('--dry-run')) {
++      return { stdout: JSON.stringify([{ files }]), stderr: '', code: 0 };
++    }
++    const filename = `${packageName}-2.0.0.tgz`;
++    packedNames.push(filename);
++    await fs.writeFile(path.join(repoRoot, 'artifacts', filename), `${packageName} tarball`);
++    return {
++      stdout: JSON.stringify([
++        { filename, files, integrity: `sha512-${packageName}`, shasum: `sha-${packageName}` }
++      ]),
++      stderr: '',
++      code: 0
++    };
++  };
++
++  let consumerTestCalled = false;
++  const state = await packRelease(
++    { version: '2.0.0' },
++    {
++      repoRoot,
++      getGitCommit: async () => 'abc123',
++      runProcess: fakeRunProcess,
++      runConsumerTests: async ({ tarballs, version }) => {
++        consumerTestCalled = true;
++        assert.equal(version, '2.0.0');
++        assert.deepEqual(Object.keys(tarballs), ['k-vtable', 'k-react-vtable']);
++      }
++    }
++  );
++
++  assert.equal(consumerTestCalled, true);
++  assert.deepEqual(packedNames, ['k-vtable-2.0.0.tgz', 'k-react-vtable-2.0.0.tgz']);
++  assert.equal(state.testsPassed, true);
++  assert.equal(state.tarballs['k-vtable'].integrity, 'sha512-k-vtable');
++  assert.equal(state.tarballs['k-react-vtable'].filename, 'k-react-vtable-2.0.0.tgz');
++  assert.equal(
++    JSON.parse(await fs.readFile(path.join(repoRoot, 'artifacts', 'k-release-2.0.0.pack.json'))).testsPassed,
++    true
++  );
++});
++
++test('collectPackageVersions finds every nested pnpm occurrence', () => {
++  const tree = [
++    {
++      name: 'consumer',
++      dependencies: {
++        'k-vtable': {
++          version: '2.0.0',
++          dependencies: {
++            '@visactor/vrender-core': { version: '1.1.5' },
++            '@visactor/vrender-kits': {
++              version: '1.1.5',
++              dependencies: { '@visactor/vrender-core': { version: '1.1.5' } }
++            }
++          }
++        },
++        '@visactor/vchart': {
++          version: '2.1.3',
++          dependencies: { '@visactor/vrender-core': { version: '1.1.5' } }
++        }
++      }
++    }
++  ];
++
++  const versions = collectPackageVersions(tree, ['k-vtable', '@visactor/vrender-core', '@visactor/vrender-kits']);
++  assert.deepEqual([...versions.get('k-vtable')], ['2.0.0']);
++  assert.deepEqual([...versions.get('@visactor/vrender-core')], ['1.1.5']);
++  assert.deepEqual([...versions.get('@visactor/vrender-kits')], ['1.1.5']);
++});
++
++test('createConsumerProject writes module, type, React custom layout, and PivotChart probes', async t => {
++  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-consumer-'));
++  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
++  const tarballs = {
++    'k-vtable': { path: '/tmp/k-vtable-2.0.0.tgz' },
++    'k-react-vtable': { path: '/tmp/k-react-vtable-2.0.0.tgz' }
++  };
++
++  await createConsumerProject({ projectRoot, version: '2.0.0', tarballs });
++
++  const manifest = JSON.parse(await fs.readFile(path.join(projectRoot, 'package.json')));
++  assert.equal(manifest.dependencies['k-vtable'], 'file:/tmp/k-vtable-2.0.0.tgz');
++  assert.equal(manifest.dependencies['@visactor/vchart'], '2.1.3');
++  assert.equal(manifest.devDependencies.vite, '3.2.6');
++  const tsconfig = JSON.parse(await fs.readFile(path.join(projectRoot, 'tsconfig.json')));
++  assert.equal(tsconfig.compilerOptions.skipLibCheck, true);
++  const typeProbe = await fs.readFile(path.join(projectRoot, 'type-probe.ts'), 'utf8');
++  assert.match(typeProbe, /k-vtable\/es\/vrender/);
++  assert.match(typeProbe, /BaseTableAPI.*k-vtable\/es\/ts-types/s);
++  assert.match(typeProbe, /ComponentProps<typeof ListTable>/);
++  const browserProbe = await fs.readFile(path.join(projectRoot, 'src', 'main.js'), 'utf8');
++  assert.match(browserProbe, /customLayout/);
++  assert.match(browserProbe, /PivotChart/);
++  assert.match(browserProbe, /CanvasFactory/);
++  assert.match(await fs.readFile(path.join(projectRoot, 'vite.config.js'), 'utf8'), /base: '\.\/'/);
++});
++
++test('runCleanConsumerTests requires one runtime version and a passing browser DOM', async t => {
++  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-consumer-repo-'));
++  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-consumer-run-'));
++  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
++  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
++  const pnpmBinary = path.join(repoRoot, 'common', 'temp', 'pnpm-local', 'node_modules', '.bin', 'pnpm');
++  await fs.mkdir(path.dirname(pnpmBinary), { recursive: true });
++  await fs.writeFile(pnpmBinary, 'fixture');
++
++  const runtimeDependencies = Object.fromEntries(
++    Object.keys(RUNTIME_VERSIONS).map(name => [name, { version: '1.1.5' }])
++  );
++  const listTree = [
++    {
++      name: 'consumer',
++      dependencies: {
++        'k-vtable': { version: '2.0.0', dependencies: runtimeDependencies },
++        'k-react-vtable': { version: '2.0.0' },
++        '@visactor/vchart': { version: '2.1.3', dependencies: runtimeDependencies }
++      }
++    }
++  ];
++  const calls = [];
++  const fakeRunProcess = async (command, args, options) => {
++    calls.push({ command, args, cwd: options?.cwd });
++    if (command === '/fake/chrome') {
++      return {
++        stdout: '<html data-test-status="passed"><body>passed</body></html>',
++        stderr: '',
++        code: 0
++      };
++    }
++    if (args.includes('list')) {
++      return { stdout: JSON.stringify(listTree), stderr: '', code: 0 };
++    }
++    return { stdout: '', stderr: '', code: 0 };
++  };
++
++  await runCleanConsumerTests({
++    repoRoot,
++    projectRoot,
++    keepTemp: true,
++    version: '2.0.0',
++    tarballs: {
++      'k-vtable': { path: '/tmp/k-vtable-2.0.0.tgz' },
++      'k-react-vtable': { path: '/tmp/k-react-vtable-2.0.0.tgz' }
++    },
++    runProcess: fakeRunProcess,
++    chromeExecutable: '/fake/chrome'
++  });
++
++  const installCall = calls.find(call => call.args.includes('install'));
++  assert.equal(installCall.args[0], 'install');
++  assert.equal(installCall.cwd, projectRoot);
++  assert.match(installCall.command, /pnpm$/);
++  assert.equal(calls.some(call => call.args.includes('list')), true);
++  assert.equal(calls.some(call => call.args.includes('tsc')), true);
++  assert.equal(calls.some(call => call.args.includes('vite')), true);
++  assert.equal(calls.some(call => call.command === '/fake/chrome'), true);
++});
++
++test('publishRelease publishes core first and waits before publishing React', async t => {
++  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'k-release-publish-'));
++  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
++  await fs.mkdir(path.join(repoRoot, 'artifacts'), { recursive: true });
++  const corePath = path.join(repoRoot, 'artifacts', 'k-vtable-2.0.0.tgz');
++  const reactPath = path.join(repoRoot, 'artifacts', 'k-react-vtable-2.0.0.tgz');
++  await fs.writeFile(corePath, 'core');
++  await fs.writeFile(reactPath, 'react');
++  await fs.writeFile(
++    path.join(repoRoot, 'artifacts', 'k-release-2.0.0.pack.json'),
++    JSON.stringify({
++      version: '2.0.0',
++      sourceCommit: 'abc123',
++      testsPassed: true,
++      tarballs: {
++        'k-vtable': {
++          filename: path.basename(corePath),
++          path: corePath,
++          integrity: 'sha512-core',
++          shasum: 'sha-core'
++        },
++        'k-react-vtable': {
++          filename: path.basename(reactPath),
++          path: reactPath,
++          integrity: 'sha512-react',
++          shasum: 'sha-react'
++        }
++      }
++    })
++  );
++
++  const published = new Set();
++  const commands = [];
++  const fakeRunProcess = async (command, args) => {
++    assert.equal(command, 'npm');
++    commands.push(args);
++    if (args[0] === 'whoami') {
++      return { stdout: 'publisher\n', stderr: '', code: 0 };
++    }
++    if (args[0] === 'view') {
++      const packageName = args[1].split('@2.0.0')[0];
++      if (!published.has(packageName)) {
++        const error = new Error('npm ERR! code E404');
++        error.code = 'E404';
++        throw error;
++      }
++      const integrity = packageName === 'k-vtable' ? 'sha512-core' : 'sha512-react';
++      return {
++        stdout: JSON.stringify({ version: '2.0.0', dist: { integrity } }),
++        stderr: '',
++        code: 0
++      };
++    }
++    if (args[0] === 'publish') {
++      published.add(path.basename(args[1]).startsWith('k-react') ? 'k-react-vtable' : 'k-vtable');
++      return { stdout: 'published', stderr: '', code: 0 };
++    }
++    throw new Error(`Unexpected npm command: ${args.join(' ')}`);
++  };
++
++  const result = await publishRelease(
++    { version: '2.0.0', tag: 'latest', registry: 'https://registry.example.test/' },
++    {
++      repoRoot,
++      getGitCommit: async () => 'abc123',
++      runProcess: fakeRunProcess,
++      wait: async () => {}
++    }
++  );
++
++  assert.deepEqual(result, { publishedCore: true, publishedReact: true });
++  const publishCommands = commands.filter(args => args[0] === 'publish');
++  assert.equal(path.basename(publishCommands[0][1]), 'k-vtable-2.0.0.tgz');
++  assert.equal(path.basename(publishCommands[1][1]), 'k-react-vtable-2.0.0.tgz');
++  assert.equal(publishCommands.every(args => args.includes('https://registry.example.test/')), true);
++});

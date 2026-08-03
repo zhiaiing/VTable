@@ -5,6 +5,12 @@ import type { Scenegraph } from '../scenegraph';
 
 export function createReactContainer(table: BaseTableAPI) {
   const { internalProps } = table;
+
+  internalProps.tableBodyDomContainer = document.createElement('div');
+  internalProps.tableBodyDomContainer.id = 'vtable-table-body-dom-container';
+  internalProps.tableBodyDomContainer.classList.add('table-component-container');
+  internalProps.element.appendChild(internalProps.tableBodyDomContainer);
+
   internalProps.bodyDomContainer = document.createElement('div');
   internalProps.bodyDomContainer.id = 'vtable-body-dom-container';
   internalProps.bodyDomContainer.classList.add('table-component-container');
@@ -14,6 +20,11 @@ export function createReactContainer(table: BaseTableAPI) {
   internalProps.headerDomContainer.id = 'vtable-header-dom-container';
   internalProps.headerDomContainer.classList.add('table-component-container');
   internalProps.element.appendChild(internalProps.headerDomContainer);
+
+  internalProps.tableHeaderDomContainer = document.createElement('div');
+  internalProps.tableHeaderDomContainer.id = 'vtable-table-header-dom-container';
+  internalProps.tableHeaderDomContainer.classList.add('table-component-container');
+  internalProps.element.appendChild(internalProps.tableHeaderDomContainer);
 
   internalProps.frozenBodyDomContainer = document.createElement('div');
   internalProps.frozenBodyDomContainer.id = 'vtable-frozen-body-dom-container';
@@ -54,6 +65,8 @@ export function createReactContainer(table: BaseTableAPI) {
 export function updateReactContainer(table: BaseTableAPI) {
   const {
     headerDomContainer,
+    tableBodyDomContainer,
+    tableHeaderDomContainer,
     bodyDomContainer,
     frozenBodyDomContainer,
     frozenHeaderDomContainer,
@@ -72,7 +85,9 @@ export function updateReactContainer(table: BaseTableAPI) {
     !rightFrozenHeaderDomContainer &&
     !bottomDomContainer &&
     !frozenBottomDomContainer &&
-    !rightFrozenBottomDomContainer
+    !rightFrozenBottomDomContainer &&
+    !tableBodyDomContainer &&
+    !tableHeaderDomContainer
   ) {
     return;
   }
@@ -88,7 +103,19 @@ export function updateReactContainer(table: BaseTableAPI) {
   const frozenRowsHeight = table.getFrozenRowsHeight();
   const bottomFrozenRowsHeight = table.getBottomFrozenRowsHeight();
   const totalFrozenRowsHeight = frozenRowsHeight + bottomFrozenRowsHeight;
-  const bodyHeight = Math.min(allRowsHeight - totalFrozenRowsHeight, tableNoFrameHeight - totalFrozenRowsHeight);
+  const h = table.tableNoFrameHeight - totalFrozenRowsHeight;
+  const hh = Math.min(allRowsHeight - totalFrozenRowsHeight, tableNoFrameHeight - totalFrozenRowsHeight);
+  const bodyHeight = hh < h ? h : hh;
+
+  tableBodyDomContainer.style.width = `${tableNoFrameWidth}px`;
+  // const tableHeight = Math.min(allRowsHeight - frozenRowsHeight, tableNoFrameHeight - frozenRowsHeight);
+  tableBodyDomContainer.style.height = `${bodyHeight}px`;
+  tableBodyDomContainer.style.top = `${table.tableY + frozenRowsHeight}px`;
+
+  tableHeaderDomContainer.style.width = `${tableNoFrameWidth}px`;
+  // const tableHeight = Math.min(allRowsHeight - frozenRowsHeight, tableNoFrameHeight - frozenRowsHeight);
+  tableHeaderDomContainer.style.height = `${frozenRowsHeight}px`;
+  tableHeaderDomContainer.style.top = `${table.tableY + table.stateManager.stickyTop}px`;
 
   if (table.frozenColCount > 0) {
     headerDomContainer.style.left = `${table.tableX + frozenColsWidth}px`;
@@ -105,6 +132,7 @@ export function updateReactContainer(table: BaseTableAPI) {
   // headerDomContainer.style.width = `${(headerDomContainer.parentElement?.offsetWidth ?? 1) - 1}px`;
   headerDomContainer.style.width = `${bodyWidth}px`;
   headerDomContainer.style.height = `${frozenRowsHeight}px`;
+  headerDomContainer.style.top = `${table.stateManager.stickyTop}px`;
   bodyDomContainer.style.top = `${table.tableY}px`;
 
   // bodyDomContainer.style.width = `${(bodyDomContainer.parentElement?.offsetWidth ?? 1) - 1}px`;
@@ -118,7 +146,8 @@ export function updateReactContainer(table: BaseTableAPI) {
 
   frozenHeaderDomContainer.style.width = `${frozenColsWidth}px`;
   frozenHeaderDomContainer.style.height = `${frozenRowsHeight}px`;
-  frozenHeaderDomContainer.style.top = `${table.tableY}px`;
+  // frozenHeaderDomContainer.style.top = `${table.tableY}px`;
+    frozenHeaderDomContainer.style.top = `${table.tableY + table.stateManager.stickyTop}px`;
 
   rightFrozenBodyDomContainer.style.width = `${rightFrozenColsWidth}px`;
   rightFrozenBodyDomContainer.style.height = `${bodyHeight}px`;
@@ -127,7 +156,8 @@ export function updateReactContainer(table: BaseTableAPI) {
 
   rightFrozenHeaderDomContainer.style.width = `${rightFrozenColsWidth}px`;
   rightFrozenHeaderDomContainer.style.height = `${frozenRowsHeight}px`;
-  rightFrozenHeaderDomContainer.style.top = `${table.tableY}px`;
+  // rightFrozenHeaderDomContainer.style.top = `${table.tableY}px`;
+  rightFrozenHeaderDomContainer.style.top = `${table.tableY  + table.stateManager.stickyTop}px`;
   rightFrozenHeaderDomContainer.style.left = `${table.tableX + tableNoFrameWidth - rightFrozenColsWidth}px`;
 
   bottomDomContainer.style.width = `${bodyWidth}px`;

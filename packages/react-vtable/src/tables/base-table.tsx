@@ -7,7 +7,7 @@ import withContainer from '../containers/withContainer';
 import type { TableContextType } from '../context/table';
 import RootTableContext from '../context/table';
 import { isEqual, isNil, isNumber, pickWithout } from '@visactor/vutils';
-import { toArray } from '../util';
+import { isEqualRecords, toArray } from '../util';
 import { REACT_PRIVATE_PROPS } from '../constants';
 import type { IMarkElement } from '../table-components';
 import type {
@@ -335,7 +335,7 @@ const BaseTable: React.FC<Props> = React.forwardRef((props, ref) => {
       // columnWidths.current = [];
       handleTableRender();
       eventsBinded.current = props;
-    } else if (hasRecords && !isEqual(props.records, prevRecords.current, { skipFunction: skipFunctionDiff })) {
+    } else if (hasRecords && !isEqualRecords(props.records, prevRecords.current, { skipFunction: skipFunctionDiff })) {
       prevRecords.current = props.records;
 
       if (keepColumnWidthChange) {
