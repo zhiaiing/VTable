@@ -115,3 +115,8 @@ tsconfig.tsbuildinfo
 
 # codex
 .omx/
+
+# k-vtable release artifacts
+/release/
+/artifacts/
+docs/superpowers/

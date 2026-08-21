@@ -41,6 +41,7 @@ import type { ICustomLayout } from './customLayout';
 import type { ColorPropertyDefine, StylePropertyFunctionArg } from './style-define';
 import type { TableTheme } from '../themes/theme-define';
 import type { LineAxisAttributes } from '@src/vrender';
+import type { SimpleHeaderLayoutMap } from '../layout';
 
 export interface CellAddress {
   col: number;
@@ -331,6 +332,10 @@ export interface ListTableConstructorOptions extends BaseTableConstructorOptions
     enableTreeStickCell?: boolean;
     /** 这个配置对应当在rowSeriesNumber中配置cellType: 'checkbox'时，如想在group分组名中显示checkbox，则需要开启这个配置 。默认为false*/
     titleCheckbox?: boolean;
+    /** 分组标题合并配置 */
+    groupCellMerge?: (col: number, row: number, cellRange: CellRange, layout: SimpleHeaderLayoutMap) => void;
+    /** 分组处理数据 */
+    customDealGroupData?: (records: any[]) => any[];
   };
   /** @deprecated 请使用groupConfig */
   groupBy?: GroupByOption;

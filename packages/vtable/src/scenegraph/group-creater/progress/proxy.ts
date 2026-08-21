@@ -318,6 +318,10 @@ export class SceneProxy {
       let maxHeight = 0;
       for (let col = 0; col < this.table.frozenColCount; col++) {
         const colGroup = this.table.scenegraph.getColGroup(col);
+        if (!colGroup) {
+          this.table.scenegraph.rowHeaderGroup.setAttribute('height', maxHeight);
+          return;
+        }
         const cellLocation = this.table.isListTable() ? 'body' : 'rowHeader';
         const { height } = createComplexColumn(
           colGroup,

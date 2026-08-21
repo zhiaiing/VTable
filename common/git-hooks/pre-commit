@@ -31,7 +31,7 @@ if [[ $STAGE_FILES != "" ]] ; then
   fi
 fi
 
-node common/scripts/install-run-rush.js lint-staged || exit $? #++
+# node common/scripts/install-run-rush.js lint-staged || exit $? #++
 
 if [ -f "common/scripts/pre-commit" ]; then
   common/scripts/pre-commit

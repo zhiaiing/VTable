@@ -224,6 +224,7 @@ export interface IListTableDataConfig {
   filterRules?: FilterRules; //过滤规则；
   // totals?: Totals; //小计或总计；
   // derivedFieldRules?: DerivedFieldRules;
+  customDealGroupData?: (records: any[]) => any[];
 }
 /**
  * 透视表数据处理配置

@@ -139,8 +139,8 @@ export class ListTable extends BaseTable implements ListTableAPI {
     internalProps.sortState = options.sortState;
     internalProps.multipleSort = !!options.multipleSort;
     internalProps.dataConfig = this.internalProps.groupBy
-      ? getGroupByDataConfig(this.internalProps.groupBy, options.addRecordRule)
-      : { addRecordRule: options.addRecordRule }; //cloneDeep(options.dataConfig ?? {});
+      ? getGroupByDataConfig(this.internalProps.groupBy, options.addRecordRule, this.internalProps.customDealGroupData)
+      : { addRecordRule: options.addRecordRule, customDealGroupData: this.internalProps.customDealGroupData }; //cloneDeep(options.dataConfig ?? {});
     internalProps.columns = options.columns
       ? cloneDeepSpec(options.columns, ['children']) // children for react
       : options.header
@@ -792,7 +792,7 @@ export class ListTable extends BaseTable implements ListTableAPI {
     internalProps.sortState = options.sortState;
     // internalProps.dataConfig = {}; // cloneDeep(options.dataConfig ?? {});
     internalProps.dataConfig = (this.internalProps as ListTableProtected).groupBy
-      ? getGroupByDataConfig((this.internalProps as ListTableProtected).groupBy, options.addRecordRule)
+      ? getGroupByDataConfig((this.internalProps as ListTableProtected).groupBy, options.addRecordRule, (this.internalProps as ListTableProtected).customDealGroupData)
       : { addRecordRule: options.addRecordRule }; //cloneDeep(options.dataConfig ?? {});
     //更新protectedSpace
     this.showHeader = options.showHeader ?? true;
@@ -1609,6 +1609,15 @@ export class ListTable extends BaseTable implements ListTableAPI {
   setRecords(records: Array<any>, option?: { sortState?: SortState | SortState[] | null }): void {
     this.stateManager.endResizeIfResizing();
     clearChartRenderQueue();
+    // When progressive rendering has moved the maintained body range away from
+    // its first column, an empty result cannot rebuild that range at the old offset.
+    if (
+      records?.length === 0 &&
+      this.scrollLeft !== 0 &&
+      this.scenegraph.bodyColStart > this.scenegraph.proxy.bodyLeftCol
+    ) {
+      this.stateManager.setScrollLeft(0, undefined, false);
+    }
     // 释放事件 及 对象
     this.internalProps.dataSource?.release();
     // 过滤掉dataSource的引用
