@@ -68,6 +68,10 @@ export const menus = [
       },
       {
         path: 'debug',
+        name: 'issue-3752-large-merge-auto-height'
+      },
+      {
+        path: 'debug',
         name: 'issue-4761-update-records-edit-render'
       },
       {
@@ -158,6 +162,10 @@ export const menus = [
       {
         path: 'list',
         name: 'issue-5211-tree-checkbox-record-index'
+      },
+      {
+        path: 'list',
+        name: 'issue-3975-tree-checkbox-row-move'
       },
       {
         path: 'list',
