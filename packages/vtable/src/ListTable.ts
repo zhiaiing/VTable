@@ -1855,7 +1855,8 @@ export class ListTable extends BaseTable implements ListTableAPI {
     values: (string | number)[][],
     workOnEditableCell = false,
     triggerEvent = true,
-    noTriggerChangeCellValuesEvent?: boolean
+    noTriggerChangeCellValuesEvent?: boolean,
+    shouldCancel?: () => boolean
   ) {
     return listTableChangeCellValues(
       startCol,
@@ -1864,7 +1865,8 @@ export class ListTable extends BaseTable implements ListTableAPI {
       workOnEditableCell,
       triggerEvent,
       this,
-      noTriggerChangeCellValuesEvent
+      noTriggerChangeCellValuesEvent,
+      shouldCancel
     );
   }
 
