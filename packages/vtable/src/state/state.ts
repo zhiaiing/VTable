@@ -58,6 +58,8 @@ import { expendCellRange } from '../tools/merge-range';
 
 export class StateManager {
   table: BaseTableAPI;
+  // 吸顶位置
+  stickyTop: number = 0;
   /**
    * Default 默认展示
    * grabing 拖拽中
@@ -353,6 +355,7 @@ export class StateManager {
   }
   _initState() {
     this.interactionState = InteractionState.default;
+    this.stickyTop = 0;
     this.select = {
       highlightScope: HighlightScope.single,
       ranges: [],
@@ -439,6 +442,17 @@ export class StateManager {
       col: -1,
       row: -1
     };
+  }
+
+  setStickyTop(stickyTop: number) {
+    if (this.stickyTop !== stickyTop) {
+      this.stickyTop = stickyTop;
+      this.table.scenegraph.updateDomContainer();
+      this.table.scenegraph.colHeaderGroup.setAttribute('y', stickyTop);
+      this.table.scenegraph.cornerHeaderGroup.setAttribute('y', stickyTop);
+      this.table.scenegraph.rightTopCornerGroup.setAttribute('y', stickyTop);
+      this.table.scenegraph.updateNextFrame();
+    }
   }
 
   setHoverState() {
@@ -1148,6 +1162,8 @@ export class StateManager {
     const scrollTop = this.scroll.verticalBarPos;
     const viewHeight = this.table.tableNoFrameHeight;
 
+    this.table.scenegraph.component.updateVerticalFrozenShadowLine(Math.min(1, (scrollTop + viewHeight)/totalHeight));
+
     if (scrollTop + viewHeight >= totalHeight) {
       this.table.fireListeners(TABLE_EVENT_TYPE.SCROLL_VERTICAL_END, {
         scrollTop,
@@ -1163,6 +1179,8 @@ export class StateManager {
     const totalWidth = this.table.getAllColsWidth();
     const scrollLeft = this.scroll.horizontalBarPos;
     const viewWidth = this.table.tableNoFrameWidth;
+
+     this.table.scenegraph.component.updateHorizontalFrozenShadowLine(Math.min(1, (scrollLeft + viewWidth)/totalWidth));
 
     if (scrollLeft + viewWidth >= totalWidth) {
       this.table.fireListeners(TABLE_EVENT_TYPE.SCROLL_HORIZONTAL_END, {
@@ -1212,7 +1230,7 @@ export class StateManager {
     this.table.scenegraph.proxy.deltaY = 0;
 
     // 滚动期间清空选中清空
-    this.updateHoverPos(-1, -1);
+    // this.updateHoverPos(-1, -1);
     // this.updateSelectPos(-1, -1);
 
     this.table.fireListeners(TABLE_EVENT_TYPE.SCROLL, {

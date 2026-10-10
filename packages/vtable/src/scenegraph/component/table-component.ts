@@ -2,11 +2,12 @@ import { theme } from './../../themes';
 import type { ILine, IRect, IGroup, FederatedPointerEvent, Text, IText } from '@src/vrender';
 import { createRect, createLine, createText, createGroup, createSymbol } from '@src/vrender';
 import { ScrollBar } from '@src/vrender';
+import { VTableScrollBar } from './vtable-scroll-bar';
 import type { Group } from '../graphic/group';
 import { MenuHandler } from './menu';
 import { DrillIcon } from './drill-icon';
 import { CellMover } from './cell-mover';
-import { getBodyHorizontalScrollRange, getColX, getRowY } from './util';
+import { getBodyHorizontalScrollRange, getColX, getRowBottomY, getRowTopY, getRowY } from './util';
 import type { BaseTableAPI } from '../../ts-types/base-table';
 import { isValid } from '@visactor/vutils';
 
@@ -38,6 +39,8 @@ export class TableComponent {
   rightFrozenHScrollBar: ScrollBar; // 右冻结区横向滚动条
   frozenShadowLine: IRect; // 表格冻结列右侧阴影块
   rightFrozenShadowLine: IRect; // 表格右侧冻结列左侧阴影块
+  topFrozenShadowLine: IRect; // 表格顶部冻结列上侧阴影块
+  bottonFrozenShadowLine: IRect; // 表格底部冻结列上侧阴影块
   drillIcon: DrillIcon; // drill icon
   cellMover: CellMover; // 表格列顺序调整标记
   labelVisible: boolean; // 是否显示label
@@ -229,6 +232,46 @@ export class TableComponent {
       }
     });
 
+    this.topFrozenShadowLine = createRect({
+      visible: visible === 'always',
+      pickable: false,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: shadowWidth,
+      fill: {
+        gradient: 'linear',
+        x0: 0,
+        y0: 0,
+        x1: 0,
+        y1: 1,
+        stops: [
+          { color: shadowStartColor, offset: 0 },
+          { color: shadowEndColor, offset: 1 }
+        ]
+      }
+    });
+
+    this.bottonFrozenShadowLine = createRect({
+      visible: visible === 'always',
+      pickable: false,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: shadowWidth,
+      fill: {
+        gradient: 'linear',
+        x0: 0,
+        y0: 0,
+        x1: 0,
+        y1: 1,
+        stops: [
+          { color: shadowEndColor, offset: 0 },
+          { color: shadowStartColor, offset: 1 }
+        ]
+      }
+    });
+
     // TO BE DONE 冻结列border(theme.frozenColumnLine?.border)
 
     // 弹出窗口
@@ -251,6 +294,8 @@ export class TableComponent {
   addToGroup(componentGroup: Group) {
     componentGroup.addChild(this.frozenShadowLine);
     componentGroup.addChild(this.rightFrozenShadowLine);
+    componentGroup.addChild(this.bottonFrozenShadowLine);
+    componentGroup.addChild(this.topFrozenShadowLine);
     // componentGroup.addChild(this.selectBorder);
     componentGroup.addChild(this.columnResizeBgLine);
     componentGroup.addChild(this.columnResizeLine);
@@ -307,7 +352,7 @@ export class TableComponent {
     // const visible = theme.scrollStyle?.visible as string;
     // const hoverOn = theme.scrollStyle?.hoverOn as boolean;
 
-    this.hScrollBar = new ScrollBar({
+    this.hScrollBar = new VTableScrollBar({
       direction: 'horizontal',
       x: -this.table.tableNoFrameWidth * 2,
       y: -this.table.tableNoFrameHeight * 2,
@@ -328,7 +373,7 @@ export class TableComponent {
 
     // 左冻结/右冻结滚动条默认不展示，仅在对应区域开启内部滚动（scrollFrozenCols/scrollRightFrozenCols）
     // 且该区域存在溢出（offset > 0）时显示。
-    this.frozenHScrollBar = new ScrollBar({
+    this.frozenHScrollBar = new VTableScrollBar({
       direction: 'horizontal',
       x: -this.table.tableNoFrameWidth * 2,
       y: -this.table.tableNoFrameHeight * 2,
@@ -345,7 +390,7 @@ export class TableComponent {
     (this.frozenHScrollBar as any).render();
     this.frozenHScrollBar.hideAll();
 
-    this.rightFrozenHScrollBar = new ScrollBar({
+    this.rightFrozenHScrollBar = new VTableScrollBar({
       direction: 'horizontal',
       x: -this.table.tableNoFrameWidth * 2,
       y: -this.table.tableNoFrameHeight * 2,
@@ -362,7 +407,7 @@ export class TableComponent {
     (this.rightFrozenHScrollBar as any).render();
     this.rightFrozenHScrollBar.hideAll();
 
-    this.vScrollBar = new ScrollBar({
+    this.vScrollBar = new VTableScrollBar({
       direction: 'vertical',
       x: -this.table.tableNoFrameWidth * 2,
       y: -this.table.tableNoFrameHeight * 2,
@@ -580,6 +625,8 @@ export class TableComponent {
       this.setFrozenColumnShadow(this.table.frozenColCount - 1);
       this.setRightFrozenColumnShadow(this.table.colCount - this.table.rightFrozenColCount);
     }
+
+    this.setBottomFrozenColumnShadow();
   }
 
   /**
@@ -848,6 +895,53 @@ export class TableComponent {
     );
   }
 
+  setBottomFrozenColumnShadow() {
+    const rowY = getRowBottomY(this.table);
+    if (this.table.bottomFrozenRowCount === 0 || this.table.theme.frozenColumnLine?.shadow?.visible !== 'always') {
+      this.bottonFrozenShadowLine.setAttributes({
+        visible: false,
+        y: 0,
+        width: 0
+      });
+    } else {
+      const isBottom = this.table.getAllRowsHeight() - (this.table.scrollTop + this.table.tableNoFrameHeight) <= 0;
+
+      if (isBottom){
+        this.bottonFrozenShadowLine.setAttributes({
+          visible: false,
+          y: rowY - (this.table.theme.frozenColumnLine?.shadow?.width ?? 1),
+          width: this.table.getDrawRange().width
+        });
+        return;
+      }
+      this.bottonFrozenShadowLine.setAttributes({
+        visible: true,
+        y: rowY - (this.table.theme.frozenColumnLine?.shadow?.width ?? 1),
+        width: this.table.getDrawRange().width
+      });
+    }
+  }
+
+  setTopFrozenColumnShadow() {
+    const rowY = getRowTopY(this.table);
+    if (
+      this.table.columnHeaderLevelCount === this.table.frozenRowCount ||
+      this.table.theme.frozenColumnLine?.shadow?.visible !== 'always'
+    ) {
+      this.topFrozenShadowLine.setAttributes({
+        visible: false,
+        y: 0,
+        width: 0
+      });
+    } else {
+      this.topFrozenShadowLine.setAttributes({
+        visible: true,
+        y: rowY,
+        width: this.table.getDrawRange().width
+      });
+    }
+  }
+
   updateFrozenColumnShadowVisibility() {
     if (this.table.theme.frozenColumnLine?.shadow?.visible !== 'overflow') {
       return;
@@ -870,6 +964,8 @@ export class TableComponent {
     }
     this.frozenShadowLine.setAttribute('visible', false);
     this.rightFrozenShadowLine.setAttribute('visible', false);
+    this.topFrozenShadowLine && this.topFrozenShadowLine.setAttribute('visible', false);
+    this.bottonFrozenShadowLine && this.bottonFrozenShadowLine.setAttribute('visible', false);
     this.table.scenegraph.updateNextFrame();
   }
   showFrozenColumnShadow() {
@@ -880,6 +976,8 @@ export class TableComponent {
     }
     this.frozenShadowLine.setAttribute('visible', true);
     this.rightFrozenShadowLine.setAttribute('visible', true);
+    this.topFrozenShadowLine && this.topFrozenShadowLine.setAttribute('visible', true);
+    this.bottonFrozenShadowLine && this.bottonFrozenShadowLine.setAttribute('visible', true);
     this.table.scenegraph.updateNextFrame();
   }
   hideVerticalScrollBar() {
@@ -947,6 +1045,7 @@ export class TableComponent {
     this.table.scenegraph.updateNextFrame();
   }
   updateVerticalScrollBarPos(topRatio: number) {
+    this.updateVerticalFrozenShadowLine(topRatio);
     const range = this.vScrollBar.attribute.range;
     const size = range[1] - range[0];
     const range0 = topRatio * (1 - size);
@@ -958,6 +1057,7 @@ export class TableComponent {
     };
   }
   updateHorizontalScrollBarPos(leftRatio: number) {
+    this.updateHorizontalFrozenShadowLine(leftRatio);
     const range = this.hScrollBar.attribute.range;
     const size = range[1] - range[0];
     const range0 = leftRatio * (1 - size);
@@ -989,6 +1089,40 @@ export class TableComponent {
       x: bounds.x1,
       y: bounds.y1
     };
+  }
+
+  updateHorizontalFrozenShadowLine = (rightRatio: number,) => {
+    if (this.table.frozenColCount) {
+      this.table.scenegraph.component.frozenShadowLine.setAttributes({
+        visible: this.table.scrollLeft !== 0
+      });
+    } else {
+      this.table.scenegraph.component.frozenShadowLine.setAttributes({
+        visible: false
+      });
+    }
+
+    if (this.table.rightFrozenColCount) {
+      this.table.scenegraph.component.rightFrozenShadowLine.setAttributes({
+        visible: isNaN(rightRatio) ? false : (rightRatio !== 1)
+      });
+    } else {
+      this.table.scenegraph.component.rightFrozenShadowLine.setAttributes({
+        visible: false
+      });
+    }
+  }
+
+  updateVerticalFrozenShadowLine = (topRatio: number,) => {
+     if (this.table.bottomFrozenRowCount) {
+      this.table.scenegraph.component.bottonFrozenShadowLine.setAttributes({
+        visible: isNaN(topRatio) ? false : (topRatio !== 1),
+      });
+    } else {
+      this.table.scenegraph.component.bottonFrozenShadowLine.setAttributes({
+        visible: false
+      });
+    }
   }
 
   updateStyle() {

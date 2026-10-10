@@ -90,7 +90,11 @@ export class EventTarget {
     this.on(type, listener);
   }
 
-  removeEventListener(type: string, listener: TableEventListener<keyof TableEventHandlersEventArgumentMap>): void {
+  removeEventListener(
+    type: string,
+    listener: TableEventListener<keyof TableEventHandlersEventArgumentMap>,
+    useCapture?: boolean
+  ): void {
     if (!this.listenersData) {
       return;
     }

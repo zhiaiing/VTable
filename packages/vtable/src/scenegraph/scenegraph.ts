@@ -1298,6 +1298,7 @@ export class Scenegraph {
     }
 
     this.proxy.progress();
+    this.component.setBottomFrozenColumnShadow();
     // this.stage.window.resize(width, height);
     this.updateNextFrame();
   }
@@ -1362,6 +1363,10 @@ export class Scenegraph {
     } else {
       // 普通模式：表格高度不超过容器高度
       tableHeight = Math.min(this.table.tableNoFrameHeight, contentHeight);
+      // const allRowsHeight = this.table.getAllRowsHeight();
+      // if (allRowsHeight > 0) {
+      //   tableHeight = Math.min(tableHeight, allRowsHeight);
+      // }
     }
 
     this.tableGroup.setAttributes({
@@ -1795,6 +1800,8 @@ export class Scenegraph {
     if (!this.isPivot && !(this.table as any).transpose) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
       this.component.setRightFrozenColumnShadow(this.table.colCount - this.table.rightFrozenColCount);
+      this.component.setBottomFrozenColumnShadow();
+      this.component.setTopFrozenColumnShadow();
     } else if (this.table.options.frozenColCount) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
     } else if (this.table.options.rightFrozenColCount) {
@@ -2152,6 +2159,9 @@ export class Scenegraph {
     this.rightBottomCornerGroup.setDeltaWidth(rightFrozenContentWidth - this.rightBottomCornerGroup.attribute.width);
     this.bodyGroup.setDeltaWidth(bodyX - this.bodyGroup.attribute.width);
     this.colHeaderGroup.setAttribute('x', this.cornerHeaderGroup.attribute.width);
+    this.colHeaderGroup.setAttribute('y', this.table.stateManager.stickyTop);
+    this.cornerHeaderGroup.setAttribute('y', this.table.stateManager.stickyTop);
+    this.rightTopCornerGroup.setAttribute('y', this.table.stateManager.stickyTop);
     this.bottomFrozenGroup.setAttribute('x', this.table.getFrozenColsWidth());
     this.bodyGroup.setAttribute('x', this.rowHeaderGroup.attribute.width);
   }
@@ -2758,6 +2768,8 @@ export class Scenegraph {
     if (!this.isPivot && !(this.table as any).transpose) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
       this.component.setRightFrozenColumnShadow(this.table.colCount - this.table.rightFrozenColCount);
+      this.component.setBottomFrozenColumnShadow();
+      this.component.setTopFrozenColumnShadow();
     } else if (this.table.options.frozenColCount) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
     } else if (this.table.options.rightFrozenColCount) {
@@ -2769,13 +2781,20 @@ export class Scenegraph {
     // rerender
     this.updateNextFrame();
   }
-  updateCol(removeCells: CellAddress[], addCells: CellAddress[], updateCells: CellAddress[] = []) {
+  updateCol(
+    removeCells: CellAddress[],
+    addCells: CellAddress[],
+    updateCells: CellAddress[] = [],
+    recalculateColWidths: boolean = true
+  ) {
     // add or move rows
     updateCol(removeCells, addCells, updateCells, this.table);
 
     // update column width and row height
 
-    this.recalculateColWidths();
+    if (recalculateColWidths) {
+      this.recalculateColWidths();
+    }
 
     this.recalculateRowHeights();
 
@@ -2786,6 +2805,8 @@ export class Scenegraph {
     if (!this.isPivot && !(this.table as any).transpose) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
       this.component.setRightFrozenColumnShadow(this.table.colCount - this.table.rightFrozenColCount);
+      this.component.setBottomFrozenColumnShadow();
+      this.component.setTopFrozenColumnShadow();
     } else if (this.table.options.frozenColCount) {
       this.component.setFrozenColumnShadow(this.table.frozenColCount - 1);
     } else if (this.table.options.rightFrozenColCount) {

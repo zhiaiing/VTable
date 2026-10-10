@@ -881,6 +881,7 @@ export function bindTableGroupListener(eventManager: EventManager) {
   // stage 的pointerdown监听
   table.scenegraph.stage.addEventListener('pointerdown', (e: FederatedPointerEvent) => {
     const eventArgsSet: SceneEvent = getCellEventArgsSetWithTable(e, table);
+    clearPageSelection();
     if (
       !eventArgsSet.eventArgs?.target ||
       (eventArgsSet.eventArgs?.target as any) !== stateManager.residentHoverIcon?.icon

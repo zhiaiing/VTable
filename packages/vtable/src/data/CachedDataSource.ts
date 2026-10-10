@@ -183,6 +183,9 @@ export class CachedDataSource extends DataSource {
       this.groupAggregator = new this.registedAggregators[AggregationType.CUSTOM]({
         field: '',
         aggregationFun: (values: any, records: any, field: any) => {
+          if (this.dataConfig.customDealGroupData) {
+            return this.dataConfig.customDealGroupData(records);
+          }
           const groupMap = new Map();
           const groupResult = [] as any[];
           for (let i = 0; i < records.length; i++) {

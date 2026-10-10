@@ -6,6 +6,7 @@ import type { EventManager } from '../event';
 import type { SceneEvent } from '../util';
 import { getCellEventArgsSet } from '../util';
 import { TABLE_EVENT_TYPE } from '../../core/TABLE_EVENT_TYPE';
+import { clearPageSelection } from '../../tools/env';
 
 export function bindScrollBarListener(eventManager: EventManager) {
   const table = eventManager.table;
@@ -85,6 +86,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
   });
   scenegraph.component.vScrollBar.addEventListener('pointerdown', (e: FederatedPointerEvent) => {
     e.stopPropagation(); //防止冒泡到stage上 检测到挨着列间隔线判断成拖拽状态
+    clearPageSelection();
     if ((scenegraph.table as any).hasListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE)) {
       scenegraph.table.fireListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE, {
         event: e.nativeEvent
@@ -92,6 +94,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
     }
   });
   scenegraph.component.vScrollBar.addEventListener('scrollDown', (e: FederatedPointerEvent) => {
+    clearPageSelection();
     scenegraph.table.eventManager.LastBodyPointerXY = { x: e.x, y: e.y };
     scenegraph.table.eventManager.isDown = true;
     if (stateManager.interactionState !== InteractionState.scrolling) {
@@ -136,6 +139,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
   });
   scenegraph.component.hScrollBar.addEventListener('pointerdown', (e: FederatedPointerEvent) => {
     e.stopPropagation(); //防止冒泡到stage上 检测到挨着列间隔线判断成拖拽状态
+    clearPageSelection();
     if ((scenegraph.table as any).hasListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE)) {
       scenegraph.table.fireListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE, {
         event: e.nativeEvent
@@ -144,6 +148,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
   });
   scenegraph.component.frozenHScrollBar.addEventListener('pointerdown', (e: FederatedPointerEvent) => {
     e.stopPropagation();
+    clearPageSelection();
     if ((scenegraph.table as any).hasListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE)) {
       scenegraph.table.fireListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE, {
         event: e.nativeEvent
@@ -152,6 +157,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
   });
   scenegraph.component.rightFrozenHScrollBar.addEventListener('pointerdown', (e: FederatedPointerEvent) => {
     e.stopPropagation();
+    clearPageSelection();
     if ((scenegraph.table as any).hasListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE)) {
       scenegraph.table.fireListeners(TABLE_EVENT_TYPE.MOUSEDOWN_TABLE, {
         event: e.nativeEvent
@@ -159,6 +165,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
     }
   });
   scenegraph.component.hScrollBar.addEventListener('scrollDown', (e: FederatedPointerEvent) => {
+    clearPageSelection();
     scenegraph.table.eventManager.LastBodyPointerXY = { x: e.x, y: e.y };
     scenegraph.table.eventManager.isDown = true;
     if (stateManager.interactionState !== InteractionState.scrolling) {
@@ -173,6 +180,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
     }
   });
   scenegraph.component.frozenHScrollBar.addEventListener('scrollDown', (e: FederatedPointerEvent) => {
+    clearPageSelection();
     scenegraph.table.eventManager.LastBodyPointerXY = { x: e.x, y: e.y };
     scenegraph.table.eventManager.isDown = true;
     if (stateManager.interactionState !== InteractionState.scrolling) {
@@ -187,6 +195,7 @@ export function bindScrollBarListener(eventManager: EventManager) {
     }
   });
   scenegraph.component.rightFrozenHScrollBar.addEventListener('scrollDown', (e: FederatedPointerEvent) => {
+    clearPageSelection();
     scenegraph.table.eventManager.LastBodyPointerXY = { x: e.x, y: e.y };
     scenegraph.table.eventManager.isDown = true;
     if (stateManager.interactionState !== InteractionState.scrolling) {

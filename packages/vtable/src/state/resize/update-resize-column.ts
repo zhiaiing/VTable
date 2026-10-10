@@ -129,6 +129,9 @@ export function updateResizeColumn(xInTable: number, yInTable: number, state: St
     state.table.scenegraph.component.setRightFrozenColumnShadow(state.table.colCount - state.table.rightFrozenColCount);
   }
 
+  state.table.scenegraph.component.setBottomFrozenColumnShadow();
+  state.table.scenegraph.component.setTopFrozenColumnShadow();
+
   // stage rerender
   state.table.scenegraph.updateNextFrame();
 }
