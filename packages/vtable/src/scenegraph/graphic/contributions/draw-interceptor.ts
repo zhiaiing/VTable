@@ -10,12 +10,15 @@ import type {
 import { injectable, createImage } from '@src/vrender';
 import * as icons from '../../../icons';
 import { calcKeepAspectRatioSize } from '../../utils/keep-aspect-ratio';
+import { getCellClipBounds, isCellOutsideClip } from '../../utils/cell-clip';
+import type { BaseTableAPI } from '../../../ts-types/base-table';
 let loadingImage: IImage;
 
 @injectable()
 export class VTableDrawItemInterceptorContribution implements IDrawItemInterceptorContribution {
   order: number = 1;
   interceptors: IDrawItemInterceptorContribution[];
+  private cellClipBounds = new WeakMap<IDrawContext, ReturnType<typeof getCellClipBounds>>();
   constructor() {
     this.interceptors = [new ImageDrawItemInterceptorContribution()];
   }
@@ -44,6 +47,17 @@ export class VTableDrawItemInterceptorContribution implements IDrawItemIntercept
     drawContribution: IDrawContribution,
     params?: IGraphicRenderDrawParams
   ): boolean {
+    if ((graphic as IGraphic & { role?: string }).role === 'cell') {
+      if (!this.cellClipBounds.has(drawContext)) {
+        this.cellClipBounds.set(
+          drawContext,
+          getCellClipBounds((drawContext.stage as typeof drawContext.stage & { table?: BaseTableAPI }).table)
+        );
+      }
+      if (isCellOutsideClip(graphic, this.cellClipBounds.get(drawContext))) {
+        return true;
+      }
+    }
     // 【性能方案】判定写在外层,减少遍历判断耗时，10000条数据减少1ms
     if (
       (!graphic.in3dMode || drawContext.in3dInterceptor) &&

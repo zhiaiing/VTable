@@ -182,7 +182,7 @@ export class EventHandler {
     }
     delete this.listeners[id];
     if (obj.target.removeEventListener) {
-      obj.target.removeEventListener(obj.type, obj.listener, ...(obj.options as []));
+      obj.target.removeEventListener(obj.type, obj.listener, obj.options?.length > 0 ? !!obj.options[0] : false);
     }
   }
   fire(target: EventTarget, type: string, ...args: any[]): void {
@@ -217,7 +217,11 @@ export class EventHandler {
     for (const key in this.listeners) {
       const listener = this.listeners[key];
       if (listener.target.removeEventListener) {
-        listener.target.removeEventListener(listener.type, listener.listener, ...(listener.options as []));
+        listener.target.removeEventListener(
+          listener.type,
+          listener.listener,
+          listener.options?.length > 0 ? !!listener.options[0] : false
+        );
       }
     }
 

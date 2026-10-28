@@ -931,6 +931,107 @@ export class AdjustColorGroupAfterRenderContribution implements IGroupRenderCont
 }
 
 @injectable()
+export class AdjustInfoGroupBeforeRenderContribution implements IGroupRenderContribution {
+  time: BaseRenderContributionTime = BaseRenderContributionTime.beforeFillStroke;
+  useStyle = true;
+  order = 0;
+  drawShape(
+    group: IGroup,
+    context: IContext2d,
+    x: number,
+    y: number,
+    doFill: boolean,
+    doStroke: boolean,
+    fVisible: boolean,
+    sVisible: boolean,
+    groupAttribute: Required<IGroupGraphicAttribute>,
+    drawContext: IDrawContext,
+    fillCb?: (
+      ctx: IContext2d,
+      markAttribute: Partial<IMarkAttribute & IGraphicAttribute>,
+      themeAttribute: IThemeAttribute
+    ) => boolean,
+    strokeCb?: (
+      ctx: IContext2d,
+      markAttribute: Partial<IMarkAttribute & IGraphicAttribute>,
+      themeAttribute: IThemeAttribute
+    ) => boolean,
+    doFillOrStroke?: { doFill: boolean; doStroke: boolean }
+  ) {
+    // 处理hover颜色
+    if ((group as any).__customInfoBefore) {
+      const table = (group.stage as any).table as BaseTableAPI;
+      if (table) {
+        (group as any).__customInfoBefore({
+          group,
+          context,
+          x,
+          y,
+          doFill,
+          doStroke,
+          fVisible,
+          sVisible,
+          groupAttribute,
+          drawContext,
+          fillCb,
+          strokeCb,
+          doFillOrStroke
+        });
+      }
+    }
+  }
+}
+
+@injectable()
+export class AdjustInfoGroupAfterRenderContribution implements IGroupRenderContribution {
+  time: BaseRenderContributionTime = BaseRenderContributionTime.afterFillStroke;
+  useStyle = true;
+  order = 0;
+  drawShape(
+    group: IGroup,
+    context: IContext2d,
+    x: number,
+    y: number,
+    doFill: boolean,
+    doStroke: boolean,
+    fVisible: boolean,
+    sVisible: boolean,
+    groupAttribute: Required<IGroupGraphicAttribute>,
+    drawContext: IDrawContext,
+    fillCb?: (
+      ctx: IContext2d,
+      markAttribute: Partial<IMarkAttribute & IGraphicAttribute>,
+      themeAttribute: IThemeAttribute
+    ) => boolean,
+    strokeCb?: (
+      ctx: IContext2d,
+      markAttribute: Partial<IMarkAttribute & IGraphicAttribute>,
+      themeAttribute: IThemeAttribute
+    ) => boolean
+  ) {
+    if (group.__customInfo) {
+      const table = (group.stage as any).table as BaseTableAPI;
+      if (table) {
+        group.__customInfo({
+          group,
+          context,
+          x,
+          y,
+          doFill,
+          doStroke,
+          fVisible,
+          sVisible,
+          groupAttribute,
+          drawContext,
+          fillCb,
+          strokeCb
+        });
+      }
+    }
+  }
+}
+
+@injectable()
 export class ClipBodyGroupBeforeRenderContribution implements IGroupRenderContribution {
   time: BaseRenderContributionTime = BaseRenderContributionTime.beforeFillStroke;
   useStyle = true;

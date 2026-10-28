@@ -120,3 +120,7 @@ tsconfig.tsbuildinfo
 
 # Local visual regression runs
 .vtable-visual/
+# k-vtable release artifacts
+/release/
+/artifacts/
+docs/superpowers/

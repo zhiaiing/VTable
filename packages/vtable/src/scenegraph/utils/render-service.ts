@@ -1,32 +1,47 @@
-import type { IGraphic } from '@src/vrender';
-import { ContainerModule, DefaultRenderService, RenderService } from '@src/vrender';
+import { DefaultRenderService, type IGraphic, type IRenderService, type IStage } from '@src/vrender';
 import type { BaseTableAPI } from '../../ts-types/base-table';
-import { InteractionState } from '../../ts-types';
+import { Group } from '../graphic/group';
 
-export default new ContainerModule((bind, unbind, isBound, rebind) => {
-  bind(RenderServiceForVTable).toSelf();
-  rebind(RenderService).toService(RenderServiceForVTable);
-});
+/** Only specialize the default service; caller-owned renderers keep their prepare lifecycle. */
+export function installTableRenderService(stage: IStage) {
+  const service = stage.renderService;
+  if (
+    Object.getPrototypeOf(service) === DefaultRenderService.prototype &&
+    service.prepare === DefaultRenderService.prototype.prepare
+  ) {
+    service.prepare = prepare;
+  }
+}
 
-export class RenderServiceForVTable extends DefaultRenderService {
-  lastPrepareTime = 0;
-  // 渲染前准备工作，计算bounds等逻辑
-  prepare(updateBounds: boolean): void {
-    this.renderTreeRoots.forEach(g => {
-      const table = (g.stage as any).table as BaseTableAPI;
-      if (table && table.stateManager.fastScrolling) {
-        // const now = Date.now();
-        // if (now - this.lastPrepareTime > 50) {
-        //   this.lastPrepareTime = now;
-        //   this._prepare(g, updateBounds);
-        // } else {
-        //   // do nothing
-        // }
-        g.stage.dirtyBounds?.empty();
-      } else {
-        this._prepare(g, updateBounds);
-      }
-    });
+function prepare(this: IRenderService, updateBounds: boolean) {
+  if (!updateBounds) {
     return;
   }
+  this.renderTreeRoots.forEach(root => {
+    const table = (root.stage as IStage & { table?: BaseTableAPI })?.table;
+    const range = table?.getBodyVisibleCellRange();
+    // Query row/column sizes once per root, rather than for every graphic.
+    const visit = (graphic: IGraphic) => {
+      if (
+        range &&
+        graphic instanceof Group &&
+        graphic.role === 'cell' &&
+        graphic.mergeStartCol === undefined &&
+        graphic.attribute.clip !== false &&
+        !graphic.shadowRoot &&
+        ((graphic.row >= table.frozenRowCount &&
+          graphic.row < table.rowCount - table.bottomFrozenRowCount &&
+          (graphic.row < range.rowStart - 1 || graphic.row > range.rowEnd + 1)) ||
+          (graphic.col >= table.frozenColCount &&
+            graphic.col < table.colCount - table.rightFrozenColCount &&
+            (graphic.col < range.colStart - 1 || graphic.col > range.colEnd + 1)))
+      ) {
+        // Keep dirty tags so the subtree updates when it next enters the viewport.
+        return;
+      }
+      graphic.forEachChildren(child => visit(child as IGraphic));
+      graphic.update({ bounds: updateBounds, trans: true });
+    };
+    visit(root);
+  });
 }

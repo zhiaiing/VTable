@@ -23,6 +23,18 @@ export async function dynamicSetY(y: number, screenTop: RowInfo | null, isEnd: b
     deltaRow = proxy.bodyBottomRow - proxy.rowEnd;
   } else {
     deltaRow = screenTopRow - proxy.referenceRow;
+    // A buffer smaller than two viewports cannot put half its rows above the
+    // viewport and still cover the bottom. Keep the complete visible range in it.
+    const screenBottom = proxy.table.getTargetRowAt(
+      y + proxy.table.tableNoFrameHeight - proxy.table.getBottomFrozenRowsHeight() - 1
+    );
+    if (screenBottom) {
+      const minDelta = Math.min(proxy.bodyBottomRow, screenBottom.row) - proxy.rowEnd;
+      const maxDelta = screenTopRow - proxy.rowStart;
+      if (minDelta <= maxDelta) {
+        deltaRow = Math.max(minDelta, Math.min(deltaRow, maxDelta));
+      }
+    }
   }
   move(deltaRow, screenTopRow, screenTopY, y, proxy);
   if (isEnd) {
@@ -335,7 +347,7 @@ function updateCellGroupPosition(colGroup: Group, direction: 'up' | 'down', prox
         (colGroup.lastChild as Group).row + 1,
         (colGroup.lastChild as Group).attribute.y + proxy.table.getRowHeight((colGroup.lastChild as Group).row) // (colGroup.lastChild as Group).attribute.height
       );
-      colGroup.appendChild(cellGroup);
+      colGroup.reorderChild(cellGroup, false);
     } else {
       const cellGroup = colGroup.lastChild as Group;
       proxy.updateCellGroupPosition(
@@ -343,7 +355,7 @@ function updateCellGroupPosition(colGroup: Group, direction: 'up' | 'down', prox
         (colGroup.firstChild as Group).row - 1,
         (colGroup.firstChild as Group).attribute.y - proxy.table.getRowHeight((cellGroup as Group).row) // cellGroup.attribute.height
       );
-      colGroup.insertBefore(cellGroup, colGroup.firstChild);
+      colGroup.reorderChild(cellGroup, true);
     }
   }
 }

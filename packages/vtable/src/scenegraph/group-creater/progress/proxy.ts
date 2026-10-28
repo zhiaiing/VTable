@@ -327,6 +327,10 @@ export class SceneProxy {
       let maxHeight = 0;
       for (let col = 0; col < this.table.frozenColCount; col++) {
         const colGroup = this.table.scenegraph.getColGroup(col);
+        if (!colGroup) {
+          this.table.scenegraph.rowHeaderGroup.setAttribute('height', maxHeight);
+          return;
+        }
         const cellLocation = this.table.isListTable() ? 'body' : 'rowHeader';
         const { height } = createComplexColumn(
           colGroup,
@@ -505,11 +509,16 @@ export class SceneProxy {
       this.screenTopRow = screenTop.row;
     }
 
-    if (y < yLimitTop && this.rowStart === this.bodyTopRow) {
+    if (
+      y < yLimitTop &&
+      this.rowStart === this.bodyTopRow &&
+      y + this.table.tableNoFrameHeight - this.table.getBottomFrozenRowsHeight() <=
+        this.table.getRowsHeight(0, this.rowEnd)
+    ) {
       // 执行真实body group坐标修改
       this.updateDeltaY(y);
       this.updateBody(y - this.deltaY);
-    } else if (y > yLimitBottom && this.rowEnd === this.bodyBottomRow) {
+    } else if (y > yLimitBottom && this.rowEnd === this.bodyBottomRow && screenTop && screenTop.row >= this.rowStart) {
       // 执行真实body group坐标修改
       this.updateDeltaY(y);
       this.updateBody(y - this.deltaY);

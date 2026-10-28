@@ -262,10 +262,10 @@ function updateColPosition(containerGroup: Group, direction: 'left' | 'right', p
     const colGroup = getFirstChild(containerGroup);
     const lastChild = getLastChild(containerGroup);
     updateColGroupPosition(colGroup, lastChild.col + 1, lastChild.attribute.x + proxy.table.getColWidth(lastChild.col));
-    containerGroup.appendChild(colGroup);
+    containerGroup.reorderChild(colGroup, false);
     // console.log('after', colGroup.col, colGroup.attribute.x, containerGroup._uid);
     if (containerGroup.border) {
-      containerGroup.appendChild(containerGroup.border);
+      containerGroup.reorderChild(containerGroup.border, false);
     }
   } else {
     const colGroup = getLastChild(containerGroup);
@@ -275,7 +275,7 @@ function updateColPosition(containerGroup: Group, direction: 'left' | 'right', p
       firstChild.col - 1,
       firstChild.attribute.x - proxy.table.getColWidth(firstChild.col - 1)
     );
-    containerGroup.insertBefore(colGroup, containerGroup.firstChild);
+    containerGroup.reorderChild(colGroup, true);
   }
 }
 

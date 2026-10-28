@@ -43,3 +43,11 @@ export function getRowY(row: number, table: BaseTableAPI, isBottomFrozen?: boole
   }
   return rowY;
 }
+
+export function getRowBottomY(table: BaseTableAPI) {
+  return Math.min(table.tableNoFrameHeight, table.getAllRowsHeight()) - table.getBottomFrozenRowsHeight();
+}
+
+export function getRowTopY(table: BaseTableAPI) {
+  return table.getFrozenRowsHeight();
+}

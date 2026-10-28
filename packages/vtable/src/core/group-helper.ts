@@ -1,10 +1,14 @@
 import { isArray, isString } from '@visactor/vutils';
-import type { GroupByOption } from '../ts-types';
+import type { BaseTableAPI, GroupByOption } from '../ts-types';
 
-export function getGroupByDataConfig(groupByOption: GroupByOption, addRecordRule: 'Array' | 'Object') {
+export function getGroupByDataConfig(
+  groupByOption: GroupByOption,
+  addRecordRule: 'Array' | 'Object',
+  customDealGroupData?: (records: any[]) => any[]
+) {
   // no sort temply
   if (isString(groupByOption)) {
-    return { groupByRules: [groupByOption], addRecordRule };
+    return { groupByRules: [groupByOption], addRecordRule, customDealGroupData };
   }
   if (isArray(groupByOption)) {
     const groupByRules = groupByOption.map(item => {
@@ -13,8 +17,8 @@ export function getGroupByDataConfig(groupByOption: GroupByOption, addRecordRule
       }
       return item.key;
     });
-    return { groupByRules, addRecordRule };
+    return { groupByRules, addRecordRule, customDealGroupData };
   }
 
-  return { addRecordRule };
+  return { addRecordRule, customDealGroupData };
 }

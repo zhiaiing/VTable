@@ -38,6 +38,8 @@ export function dealFrozen(scene: Scenegraph) {
   if (!scene.isPivot && !(scene.table as any).transpose) {
     scene.component.setFrozenColumnShadow(scene.table.frozenColCount - 1);
     scene.component.setRightFrozenColumnShadow(scene.table.colCount - scene.table.rightFrozenColCount);
+    scene.component.setBottomFrozenColumnShadow();
+    scene.component.setTopFrozenColumnShadow();
   } else if (scene.table.options.frozenColCount) {
     scene.component.setFrozenColumnShadow(scene.table.frozenColCount - 1);
   } else if (scene.table.options.frozenColCount) {
@@ -96,6 +98,8 @@ export function resetFrozen(scene: Scenegraph) {
   if (!scene.isPivot && !(scene.table as any).transpose) {
     scene.component.setFrozenColumnShadow(scene.table.frozenColCount - 1);
     scene.component.setRightFrozenColumnShadow(scene.table.colCount - scene.table.rightFrozenColCount);
+    scene.component.setBottomFrozenColumnShadow();
+    scene.component.setTopFrozenColumnShadow();
   } else if (scene.table.options.frozenColCount) {
     scene.component.setFrozenColumnShadow(scene.table.frozenColCount - 1);
   } else if (scene.table.options.rightFrozenColCount) {
@@ -258,17 +262,17 @@ export function dealRightFrozen(distRightFrozenCol: number, scene: Scenegraph) {
   } else if (distRightFrozenCol < currentRightFrozenCol) {
     for (let col = table.colCount - currentRightFrozenCol; col < table.colCount - distRightFrozenCol; col++) {
       const colGroup = scene.getColGroup(col);
-      colGroup.setAttribute(
+      colGroup?.setAttribute(
         'x',
         (bodyGroup.lastChild as Group).attribute.x + table.getColWidth((bodyGroup.lastChild as Group).col)
       );
       bodyGroup.appendChild(colGroup);
       const headerColGroup = scene.getColGroupInRightTopCorner(col);
-      headerColGroup.setAttribute(
+      headerColGroup?.setAttribute(
         'x',
         (colHeaderGroup.lastChild as Group).attribute.x + table.getColWidth((colHeaderGroup.lastChild as Group).col)
       );
-      colHeaderGroup.appendChild(headerColGroup);
+      colHeaderGroup?.appendChild(headerColGroup);
       const bottomColGroup = scene.getColGroupInRightBottomCorner(col);
       if (bottomColGroup) {
         const lastBottomColGroup = bottomFrozenGroup.lastChild as Group | undefined;

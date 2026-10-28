@@ -470,6 +470,8 @@ export abstract class BaseTable extends EventTarget implements BaseTableAPI {
     (internalProps as ListTableProtected).groupBy = groupConfig?.groupBy ?? groupBy;
     (internalProps as ListTableProtected).groupTitleCheckbox =
       groupConfig?.titleCheckbox ?? !!rowSeriesNumber?.enableTreeCheckbox;
+    (internalProps as ListTableProtected).groupCellMerge = groupConfig?.groupCellMerge;
+    (internalProps as ListTableProtected).customDealGroupData = groupConfig?.customDealGroupData;
     (internalProps as ListTableProtected).groupTitleFieldFormat =
       groupConfig?.titleFieldFormat ?? groupTitleFieldFormat;
     (internalProps as ListTableProtected).groupTitleCustomLayout =
@@ -2708,6 +2710,8 @@ export abstract class BaseTable extends EventTarget implements BaseTableAPI {
     // for memory leak of VRender Event
     this.scenegraph?.component?.vScrollBar?.release();
     this.scenegraph?.component?.hScrollBar?.release();
+    this.scenegraph?.component?.frozenHScrollBar?.release();
+    this.scenegraph?.component?.rightFrozenHScrollBar?.release();
     this.animationManager.clear();
     this.animationManager.ticker.release();
     if (this.scenegraph?.stageOwned) {
@@ -5193,7 +5197,7 @@ export abstract class BaseTable extends EventTarget implements BaseTableAPI {
         width &&
         ((typeof width === 'string' && width !== 'auto') || (typeof width === 'number' && width > 0))
       ) {
-        this._setColWidth(col, width);
+        this._setColWidth(col, width, false, true);
       }
       if (minWidth && ((typeof minWidth === 'number' && minWidth > 0) || typeof minWidth === 'string')) {
         this.setMinColWidth(col, minWidth);
@@ -5201,6 +5205,11 @@ export abstract class BaseTable extends EventTarget implements BaseTableAPI {
       if (maxWidth && ((typeof maxWidth === 'number' && maxWidth > 0) || typeof maxWidth === 'string')) {
         this.setMaxColWidth(col, maxWidth);
       }
+    }
+    if (setWidth) {
+      // Apply all widths and limits before frozen checks can cache a partial column range.
+      this._clearColRangeWidthsMap();
+      this.stateManager.checkFrozen();
     }
   }
   setSortedIndexMap(field: FieldDef, filedMap: ISortedMapItem) {

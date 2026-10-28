@@ -22,6 +22,51 @@ export class Group extends VRenderGroup {
   needUpdateWidth?: boolean;
   needUpdateHeight?: boolean;
 
+  addUpdateGlobalPositionTag(): void {
+    // An offscreen cell can stay dirty across many scroll frames. Its descendants
+    // have already been invalidated, so do not walk the custom layout again.
+    if (this.role === 'cell' && this.shouldUpdateGlobalMatrix()) {
+      return;
+    }
+    super.addUpdateGlobalPositionTag();
+  }
+
+  /** Reorder a retained row/column without detaching its unchanged stage and shared-state ancestry. */
+  reorderChild(child: INode, toStart: boolean): void {
+    if (child.parent !== this || this._nodeList) {
+      if (toStart) {
+        this.insertBefore(child, this.firstChild);
+      } else {
+        this.appendChild(child);
+      }
+      return;
+    }
+    if ((toStart ? this._firstChild : this._lastChild) === child) {
+      return;
+    }
+    if (child._prev) {
+      child._prev._next = child._next;
+    } else {
+      this._firstChild = child._next;
+    }
+    if (child._next) {
+      child._next._prev = child._prev;
+    } else {
+      this._lastChild = child._prev;
+    }
+    child._prev = toStart ? null : this._lastChild;
+    child._next = toStart ? this._firstChild : null;
+    if (toStart) {
+      this._firstChild._prev = child;
+      this._firstChild = child;
+    } else {
+      this._lastChild._next = child;
+      this._lastChild = child;
+    }
+    this._structEdit = true;
+    this.addUpdateBoundTag();
+  }
+
   // changes for size align for fs
   // constructor(attribute?: IGroupGraphicAttribute) {
   //   dealWidthSize(attribute, attribute);
